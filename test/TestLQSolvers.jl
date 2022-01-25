@@ -6,6 +6,12 @@ using Random: seed!
 
 seed!(0)
 
+# TODO(hamzah) The Stackelberg test code currently implements the Nash check. Implement the
+#              Stackelberg check instead, which requires an optimal control solver.
+function solve_optimal_control()
+    return
+end
+
 @testset "TestLQSolvers" begin
     # Common dynamics, costs, and initial condition.
     A = [1 0.1 0 0;
@@ -56,6 +62,11 @@ seed!(0)
             end
         end
     end
+
+
+
+    # TODO(hamzah) This code currently implements the Nash check. Implement the Stackelberg check instead.
+    # TODO(hamzah) Run the implemented stackelberg game.
 
 
     # Ensure that the feedback solution satisfies Stackelberg conditions of optimality
