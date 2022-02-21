@@ -33,8 +33,6 @@ function compute_L_at_t(dyn_at_t::Dynamics, costs_at_t, Zₜ₊₁)
     return lhs_matrix \ rhs_matrix
 end
 
-# TODO(hamzah) Implement an LQ Stackelberg game.
-
 # Solve a finite horizon, discrete time LQ game to feedback Stackelberg equilibrium.
 # Returns feedback matrices P[player][:, :, time]
 export solve_lq_stackelberg_feedback
