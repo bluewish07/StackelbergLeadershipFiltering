@@ -78,7 +78,7 @@ seed!(0)
         # Feedback at horizon is state cost.
         P2ₜ₊₁ = costs[follower_idx].Q
 
-        # At each horizon running backwards, perturb P1 at tt, solve the LQR problem for P2 with it, and validate the
+        # At each time step running backwards, perturb P1 at tt, solve the LQR problem for P2 with it, and validate the
         # new costs are higher than the old ones.
         for tt in horizon-1:-1:1
 
@@ -100,8 +100,8 @@ seed!(0)
             P̃2s[:, :, tt:horizon] = solve_lqr_feedback(dyn_P2_lqr, costs_P2_lqr, horizon - tt + 1)
 
             # Unroll the states again from the initial state.
-            Ps = [P̃1s, P̃2s]
-            x̃s, ũs = unroll_feedback(dyn, Ps, x₁)
+            P̃s = [P̃1s, P̃2s]
+            x̃s, ũs = unroll_feedback(dyn, P̃s, x₁)
 
             # Validate the new costs are higher than the optimal ones for the trajectory up to tt.
             new_stack_costs = [evaluate(c, x̃s, ũs) for c in costs]

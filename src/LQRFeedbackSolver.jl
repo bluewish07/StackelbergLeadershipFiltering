@@ -23,8 +23,10 @@ function solve_lqr_feedback(dyn::Dynamics, costs::Cost, horizon::Int)
     for tt in horizon:1
 
         # Solve the LQR using induction and optimizing the quadratic cost for P and Z.
-        r_terms_inv = inv(R + B' * Pₜ₊₁ * B)
-        Ps[:, :, tt] = r_terms_inv * B' * Zₜ₊₁ * A
+        r_terms = R + B' * Pₜ₊₁ * B
+
+        # This is equivalent to inv(r_terms) * (B' * Zₜ₊₁ * A)
+        Ps[:, :, tt] = r_terms \ (B' * Zₜ₊₁ * A)
         
         # Update Zₜ₊₁ at t+1 to be the one at t as we go to t-1.
         Zₜ₊₁ = Q + A' * Zₜ₊₁ * A - A' * Zₜ₊₁ * B * r_terms_inv * B' * Zₜ₊₁ * A
