@@ -10,7 +10,10 @@ using LinearAlgebra: diagm
 #   - P2 wants to get close to *P1*
 #   - both players want to expend minimal control effort
 
+stackelberg_leader_idx = 2
+
 function coupling_example()
+
     # Dynamics (Euler-discretized double integrator equations with Δt = 0.1s).
     # State for each player is layed out as [x, ẋ, y, ẏ].
     Ã = [1 0.1 0 0;
@@ -38,7 +41,7 @@ function coupling_example()
     Q₁[5, 5] = 1.0
     Q₁[7, 7] = 1.0
     c₁ = Cost(Q₁)
-    add_control_cost!(c₁, 1, 0.1 * diagm([1, 1]))
+    add_control_cost!(c₁, 1, 1 * diagm([1, 1]))
 
     Q₂ = zeros(8, 8)
     Q₂[1, 1] = 1.0
@@ -50,7 +53,7 @@ function coupling_example()
     Q₂[3, 7] = -1.0
     Q₂[7, 3] = -1.0
     c₂ = Cost(Q₂)
-    add_control_cost!(c₂, 2, 0.1 * diagm([1, 1]))
+    add_control_cost!(c₂, 2, 1 * diagm([1, 1]))
 
     costs = [c₁, c₂]
 
@@ -59,12 +62,12 @@ function coupling_example()
     x₁[[2, 4, 6, 8]] .= 0
 
     # Solve over a horizon of 100 timesteps.
-    horizon = 50
+    horizon = 100
 
     Ps = solve_lq_nash_feedback(dyn, costs, horizon)
     xs_nash_feedback, us_nash_feedback = unroll_feedback(dyn, Ps, x₁)
-    Ls = solve_lq_stackelberg_feedback(dyn, costs, horizon)
-    xs_stackelberg_feedback, us_stackelberg_feedback = unroll_feedback(dyn, Ls, x₁)
+    Ss = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
+    xs_stackelberg_feedback, us_stackelberg_feedback = unroll_feedback(dyn, Ss, x₁)
 
     return xs_nash_feedback, us_nash_feedback, xs_stackelberg_feedback, us_stackelberg_feedback
 end
@@ -108,8 +111,9 @@ plot!(p, xs_nash_feedback[5, :], xs_nash_feedback[7, :],
       label="P2 acc (Nash FB)")
 
 # Stackelberg feedback.
+p2_label = (stackelberg_leader_idx == 2) ? "P2 (leader) Stackelberg Feedback" : "P2 (follower) Stackelberg Feedback"
 plot!(p, xs_stackelberg_feedback[5, :], xs_stackelberg_feedback[7, :],
-      seriestype=:scatter, arrow=true, seriescolor=:purple, label="P2 Stackelberg Feedback")
+      seriestype=:scatter, arrow=true, seriescolor=:purple, label=p2_label)
 plot!(p, xs_stackelberg_feedback[5, :], xs_stackelberg_feedback[7, :],
       seriestype=:quiver,  seriescolor=:purple,
       quiver=(0.1 * xs_stackelberg_feedback[6, :], 0.1 * xs_stackelberg_feedback[8, :]),
@@ -121,8 +125,9 @@ plot!(p, xs_stackelberg_feedback[5, :], xs_stackelberg_feedback[7, :],
       seriesalpha=α,
       label="P2 acc (Stackelberg FB)")
 
+p1_label = (stackelberg_leader_idx == 1) ? "P1 (leader) Stackelberg Feedback" : "P1 (follower) Stackelberg Feedback"
 plot!(p, xs_stackelberg_feedback[1, :], xs_stackelberg_feedback[3, :],
-      seriestype=:scatter, arrow=true, seriescolor=:green, label="P1 Stackelberg Feedback")
+      seriestype=:scatter, arrow=true, seriescolor=:green, label=p1_label)
 plot!(p, xs_stackelberg_feedback[1, :], xs_stackelberg_feedback[3, :],
       seriestype=:quiver,  seriescolor=:green,
       quiver=(0.1 * xs_stackelberg_feedback[2, :], 0.1 * xs_stackelberg_feedback[4, :]),
