@@ -66,7 +66,7 @@ function coupling_example()
 
     Ps = solve_lq_nash_feedback(dyn, costs, horizon)
     xs_nash_feedback, us_nash_feedback = unroll_feedback(dyn, Ps, x₁)
-    Ss = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
+    Ss, _ = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
     xs_stackelberg_feedback, us_stackelberg_feedback = unroll_feedback(dyn, Ss, x₁)
 
     return xs_nash_feedback, us_nash_feedback, xs_stackelberg_feedback, us_stackelberg_feedback
