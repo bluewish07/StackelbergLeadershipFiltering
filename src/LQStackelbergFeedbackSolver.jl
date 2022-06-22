@@ -53,6 +53,9 @@ function solve_lq_stackelberg_feedback(
     B_follower = dyn.Bs[follower_idx]
     Q_leader = costs[leader_idx].Q
     Q_follower = costs[follower_idx].Q
+    Rs = [costs[leader_idx].Rs[leader_idx], costs[leader_idx].Rs[leader_idx]]
+    Rs[leader_idx] = costs[leader_idx].Rs[leader_idx]
+    Rs[follower_idx] = costs[follower_idx].Rs[follower_idx]
 
     # TODO: Change the incentives later, but for now it's zero.
     R₁₂ = zeros(udim(dyn, leader_idx), udim(dyn, follower_idx))
@@ -75,16 +78,31 @@ function solve_lq_stackelberg_feedback(
         # 1. Compute Sₖ for each player.
         common_ctrl_cost_term = I + B_follower' * Lₖ₊₁[follower_idx] * B_follower
 
+        # Attempt 1 - Basar
         G₁ = I + Lₖ₊₁[follower_idx] * B_follower * B_follower'
         G₂ = I + B_follower * B_follower' * Lₖ₊₁[follower_idx]
-        F  = I + B_follower' * Lₖ₊₁[follower_idx] * B_follower
+        G₃  = I + B_follower' * Lₖ₊₁[follower_idx] * B_follower
         H  = B_leader' * inv(G₁) * Lₖ₊₁[leader_idx] * inv(G₂) * B_leader
-        J  = B_leader' * Lₖ₊₁[follower_idx]' * B_follower * inv(F) * R₁₂ * inv(F) * B_follower' * Lₖ₊₁[follower_idx] * B_leader
+        J  = B_leader' * Lₖ₊₁[follower_idx]' * B_follower * inv(G₃) * R₁₂ * inv(G₃) * B_follower' * Lₖ₊₁[follower_idx] * B_leader
         M  = inv(G₁) * Lₖ₊₁[leader_idx] * G₂
-        N  = Lₖ₊₁[follower_idx]' * B_follower * inv(F) * R₁₂ * inv(F) * B_follower' * Lₖ₊₁[follower_idx] 
+        N  = Lₖ₊₁[follower_idx]' * B_follower * inv(G₃) * R₁₂ * inv(G₃) * B_follower' * Lₖ₊₁[follower_idx] 
         S1ₖ = inv(H * J + I) * B_leader' * (M + N) * A
+
+        # Attempt 2 - self-derived with control costs.
+        # G₃  = I + B_follower' * Lₖ₊₁[follower_idx] * B_follower
+        # D₂ = inv(G₃) * B_follower' * Lₖ₊₁[follower_idx] * B_leader
+        # F₁ = B_leader - B_follower * D₂
+        # F₂ = I - B_follower * inv(G₃) * B_follower' * Lₖ₊₁[follower_idx]
+
+        # add1 = D₂ * R₁₂ * inv(G₃) * B_follower' * Lₖ₊₁[follower_idx]
+        # add2 = F₁' * Lₖ₊₁[leader_idx] * F₂
+        # common_term = add1 + add2
+        # S1ₖ = inv(Rs[leader_idx] + common_term * B_leader) * common_term * A
+
         all_Ss[leader_idx][:, :, kk] = S1ₖ
 
+
+        # checked
         S2ₖ = (inv(common_ctrl_cost_term)
               * B_follower'
               * Lₖ₊₁[follower_idx]
