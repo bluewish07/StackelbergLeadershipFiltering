@@ -45,13 +45,15 @@ function solve_lq_nash_feedback(
     Zₜ = [zeros(size(Zₜ₊₁[i])) for i in 1:num_players]
 
     num_states = xdim(dyn)
+    all_Zs = [zeros(num_states, num_states, horizon) for i in 1:num_players]
     all_Ps = [zeros(udim(dyn, i), num_states, horizon) for i in 1:num_players]
 
-    while t > 1
-        # 2. Decrement t, compute P^{i*}_t and Z^i_t.
-        t -= 1
+    all_Zs[1][:, :, horizon] = costs[1].Q
+    all_Zs[2][:, :, horizon] = costs[2].Q
 
-        # Compute Ps for all players at time t and store them.
+    for t = horizon-1:-1:1
+
+        # 2. Compute P^{i*}_t and Z^i_t for all players at time t and store them.
         Ps = compute_P_at_t(dyn, costs, Zₜ₊₁)
         for i in 1:num_players
             num_inputs = udim(dyn, i)
@@ -66,20 +68,22 @@ function solve_lq_nash_feedback(
             Pⁱₜ = all_Ps[i][:, :, t]
 
             # Compute Z terms. There are no nonzero off diagonal Rij terms, so we just need to compute the terms with Rii.
-            summation_1_terms = [Pⁱₜ' * costs[i].Rs[i][1] * Pⁱₜ]
+            summation_1_terms = [Pⁱₜ' * costs[i].Rs[i] * Pⁱₜ]
             summation_1 = sum(summation_1_terms)
 
             summation_2_terms = [dyn.Bs[j] * all_Ps[j][:, :, t] for j in 1:num_players]
             summation_2 = dyn.A - sum(summation_2_terms)
 
-            Zₜ[i] = Qₜ[i] - summation_1 + summation_2' * Zₜ₊₁[i] * summation_2
+            Zₜ[i] = Qₜ[i] + summation_1 + summation_2' * Zₜ₊₁[i] * summation_2
         end
 
         # Update Z_{t+1}
+        all_Zs[1][:, :, t] = Zₜ[1]
+        all_Zs[2][:, :, t] = Zₜ[2]
         Zₜ₊₁ = Zₜ
 
         # 3. Go to (2) until t=1.
     end
 
-    return all_Ps
+    return all_Ps, all_Zs
 end
