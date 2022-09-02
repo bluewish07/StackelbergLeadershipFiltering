@@ -1,4 +1,5 @@
 # unit tests for confirming my derivation matches Basar's derivation over one time step with random inputs
+using StackelbergControlHypothesesFiltering
 using LinearAlgebra
 using Random: seed!
 using Test: @test, @testset
@@ -22,22 +23,6 @@ function compute_basar_recursion_one_step(A, B1, B2, Q1, Q2, L1ₜ₊₁, L2ₜ�
     dynamics_tp1 = A - B1 * S1ₜ - B2 * S2ₜ
     L1 = dynamics_tp1' * L1ₜ₊₁ * dynamics_tp1 + S1ₜ' * S1ₜ + S2ₜ' * R12 * S2ₜ + Q1
     L2 = dynamics_tp1' * L2ₜ₊₁ * dynamics_tp1 + S1ₜ' * R21 * S1ₜ + S2ₜ' * S2ₜ + Q2
-    return [S1ₜ, S2ₜ, L1, L2]
-end
-
-function compute_hamzah_derivation_one_step(A, B1, B2, Q1, Q2, L1ₜ₊₁, L2ₜ₊₁, R11, R22, R12, R21, S1ₜ=nothing, S2ₜ=nothing)
-    # Computes the recursion at a single time using hamzah's derivation.
-    Dₜ = (R22 + B2' * L2ₜ₊₁ * B2) \ (B2' * L2ₜ₊₁)
-
-    lhs = R11 + B1' * Dₜ' * R12 * Dₜ * B1 + (B1 - B2 * Dₜ * B1)' * L1ₜ₊₁ * (B1 - B2 * Dₜ * B1)
-    rhs = ((B1' * Dₜ' * R12 * Dₜ) + (B1 - B2 * Dₜ * B1)' * L1ₜ₊₁ * (I - B2 * Dₜ)) * A
-
-    S1ₜ = lhs \ rhs
-    S2ₜ = Dₜ * (A - B1 * S1ₜ)
-
-    dynamics_tp1 = A - B1 * S1ₜ - B2 * S2ₜ
-    L1 = Q1 + S1ₜ' * R11 * S1ₜ + S2ₜ' * R12 * S2ₜ + dynamics_tp1' * L1ₜ₊₁ * dynamics_tp1
-    L2 = Q2 + S1ₜ' * R21 * S1ₜ + S2ₜ' * R22 * S2ₜ + dynamics_tp1' * L2ₜ₊₁ * dynamics_tp1
     return [S1ₜ, S2ₜ, L1, L2]
 end
 
@@ -82,7 +67,7 @@ end
     S2ₜ = nothing
 
     basar = compute_basar_recursion_one_step(A, B1, B2, Q1, Q2, L1ₜ₊₁, L2ₜ₊₁, R11, R22, R12, R21, S1ₜ, S2ₜ)
-    hamzah = compute_hamzah_derivation_one_step(A, B1, B2, Q1, Q2, L1ₜ₊₁, L2ₜ₊₁, R11, R22, R12, R21, S1ₜ, S2ₜ)
+    output = compute_stackelberg_recursive_step(A, B1, B2, Q1, Q2, L1ₜ₊₁, L2ₜ₊₁, R11, R22, R12, R21)
 
     # Validate that L_i matrices are symmetric and positive definite.
     L1_basar = basar[3]
@@ -92,16 +77,16 @@ end
     @test minimum(eigvals(L1_basar)) > 0
     @test minimum(eigvals(L2_basar)) > 0
 
-    L1_hamzah = hamzah[3]
-    L2_hamzah = hamzah[4]
-    @test L1_hamzah ≈ L1_hamzah'
-    @test L2_hamzah ≈ L2_hamzah'
-    @test minimum(eigvals(L1_hamzah)) > 0
-    @test minimum(eigvals(L2_hamzah)) > 0
+    L1_output = output[3]
+    L2_output = output[4]
+    @test L1_output ≈ L1_output'
+    @test L2_output ≈ L2_output'
+    @test minimum(eigvals(L1_output)) > 0
+    @test minimum(eigvals(L2_output)) > 0
 
     # Validate that S_i, L_i matrices are the same between methods.
-    @test basar[1] ≈ hamzah[1]
-    @test basar[2] ≈ hamzah[2]
-    @test basar[3] ≈ hamzah[3]
-    @test basar[4] ≈ hamzah[4]
+    @test basar[1] ≈ output[1]
+    @test basar[2] ≈ output[2]
+    @test basar[3] ≈ output[3]
+    @test basar[4] ≈ output[4]
 end
