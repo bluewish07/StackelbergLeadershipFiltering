@@ -31,6 +31,7 @@ seed!(0)
           0 0 0  0]
     c₁ = Cost(Q₁)
     add_control_cost!(c₁, 1, ones(1, 1))
+    add_control_cost!(c₁, 2, zeros(1, 1))
 
     Q₂ = [1.  0 -1 0;
           0  0 0  0;
@@ -38,6 +39,7 @@ seed!(0)
           0  0 0  0]
     c₂ = Cost(Q₂)
     add_control_cost!(c₂, 2, ones(1, 1))
+    add_control_cost!(c₂, 1, zeros(1, 1))
 
     costs = [c₁, c₂]
 
@@ -144,7 +146,7 @@ seed!(0)
 
 
             # println(tt, " - one step + future value - ", new_P1_cost, " ", opt_P1_cost, " ", opt_P1_cost_1)
-            # @test new_P1_cost ≥ opt_P1_cost
+            @test new_P1_cost ≥ opt_P1_cost
 
             x̃s = unroll_raw_controls(dyn, ũs, x₁)
             new_stack_costs = [evaluate(c, x̃s, ũs) for c in costs]
@@ -153,10 +155,15 @@ seed!(0)
             @test new_stack_costs[leader_idx] ≥ optimal_stackelberg_costs[leader_idx]
 
             ii = leader_idx
-            manual_cost = x̃s[:, tt]' * costs[ii].Q * x̃s[:, tt]
-            manual_cost += ũs[ii][:, tt]' * costs[ii].Rs[ii] * ũs[ii][:, tt]
-            manual_cost += x̃s[:, tt+1]' * Ls[ii][:, :, tt+1] * x̃s[:, tt+1]
+            jj = follower_idx
+            state_cost = x̃s[:, tt]' * costs[ii].Q * x̃s[:, tt]
+            self_control_cost = ũs[ii][:, tt]' * costs[ii].Rs[ii] * ũs[ii][:, tt]
+            cross_control_cost = ũs[jj][:, tt]' * costs[ii].Rs[jj] * ũs[jj][:, tt]
+            future_cost = x̃s[:, tt+1]' * Ls[ii][:, :, tt+1] * x̃s[:, tt+1]
+            manual_cost = state_cost + self_control_cost + cross_control_cost + future_cost
             auto_cost = x̃s[:, tt]' * Ls[ii][:, :, tt] * x̃s[:, tt]
+
+            # @test manual_cost ≈ auto_cost
 
             println(tt, " - stack 1 (manual, auto) ", manual_cost, " ", auto_cost)
         end
@@ -195,30 +202,29 @@ seed!(0)
         Ss, Ls = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
         xs, us = unroll_feedback(dyn, Ss, x₁)
 
-        println(xs)
-
         # For each player, compute the costs using the t+1 cost matrix and compare with the cost using the cost matrix
         # at time t.
 
         for ii in 1:2
             jj = 3 - ii
             for tt in 1:horizon-1
-                # manual_cost = xs[:, tt]' * costs[ii].Q * xs[:, tt]
+                state_cost = xs[:, tt]' * costs[ii].Q * xs[:, tt]
                 # TODO(hamzah) Add the cross-control cost term?
                 self_control_cost = us[ii][:, tt]' * costs[ii].Rs[ii] * us[ii][:, tt]
+                cross_control_cost = us[jj][:, tt]' * costs[ii].Rs[jj] * us[jj][:, tt]
                 future_cost = xs[:, tt+1]' * Ls[ii][:, :, tt+1] * xs[:, tt+1]
 
-                println("L ", tt, " - ", det(Ls[:, tt]))
+                # println("L ", tt, " - ", det(Ls[:, tt]))
 
-                manual_cost = self_control_cost + future_cost
+                manual_cost = state_cost + self_control_cost + cross_control_cost + future_cost
                 computed_cost = xs[:, tt]' * Ls[ii][:, :, tt] * xs[:, tt]
 
                 println(tt, " ", ii, " - stack (manual, auto) ", manual_cost, " ", computed_cost)
-                println(tt, " manual (self ctrl, future): ", self_control_cost, " ", future_cost)
+                println(tt, " manual (self ctrl, cross ctrl, future): ", self_control_cost, " ", cross_control_cost, " ", future_cost)
 
-                # @test manual_cost ≈ computed_cost
+                @test manual_cost ≈ computed_cost
             end
-            @test false
+            # @test false
         end
     end
 

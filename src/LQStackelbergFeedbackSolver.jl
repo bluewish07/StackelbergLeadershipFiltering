@@ -1,37 +1,27 @@
 using LinearAlgebra
 
-# A helper function to compute P for all players at time t.
-function compute_L_at_t(dyn_at_t::Dynamics, costs_at_t, Zₜ₊₁)
+export compute_stackelberg_recursive_step
+function compute_stackelberg_recursive_step(A, B1, B2, Q1, Q2, L1ₜ₊₁, L2ₜ₊₁, R11, R22, R12, R21)
+    """
+    A helper which accepts all of the inputs needed for computing the Stackelberg recursion and produces the result of
+    one recursive step.
 
-    num_players = size(costs_at_t)[1]
-    num_states = xdim(dyn_at_t)
-    A = dyn_at_t.A
-    lhs_rows = Array{Float64}(undef, 0, num_states ÷ num_players)
+    Returns S1, S2, L1, L2 at the current timestep.
+    """
+    Dₜ = (R22 + B2' * L2ₜ₊₁ * B2) \ (B2' * L2ₜ₊₁)
 
-    for player_idx in 1:num_players
+    lhs = R11 + B1' * Dₜ' * R12 * Dₜ * B1 + (B1 - B2 * Dₜ * B1)' * L1ₜ₊₁ * (B1 - B2 * Dₜ * B1)
+    rhs = ((B1' * Dₜ' * R12 * Dₜ) + (B1 - B2 * Dₜ * B1)' * L1ₜ₊₁ * (I - B2 * Dₜ)) * A
 
-        # Identify terms.
-        B = dyn_at_t.Bs[player_idx]
-        Rⁱⁱ = costs_at_t[player_idx].Rs[player_idx]
+    S1ₜ = lhs \ rhs
+    S2ₜ = Dₜ * (A - B1 * S1ₜ)
 
-        # Compute terms for the matrices. First term is (*) in class notes, second is (**).
-        first_term = Rⁱⁱ + B' *  Zₜ₊₁[player_idx] * B
-        sum_of_other_player_control_matrices = sum(dyn_at_t.Bs) - B
-        second_term = B' * Zₜ₊₁[player_idx] * sum_of_other_player_control_matrices
-
-        # Create the LHS rows for the ith player and add to LHS rows.
-        lhs_ith_row  = hcat([(i == player_idx) ? first_term : second_term for i in 1:num_players]...)
-        lhs_rows = vcat(lhs_rows, lhs_ith_row)
-    end
-
-    # Construct the matrices we will use to solve for P.
-    lhs_matrix = lhs_rows
-    rhs_matrix_terms = [dyn_at_t.Bs[i]' * Zₜ₊₁[i] * A for i in 1:num_players]
-    rhs_matrix = vcat(Array{Float64}(undef, 0, num_states), rhs_matrix_terms...)
-
-    # Finally compute P.
-    return lhs_matrix \ rhs_matrix
+    dynamics_tp1 = A - B1 * S1ₜ - B2 * S2ₜ
+    L1 = Q1 + S1ₜ' * R11 * S1ₜ + S2ₜ' * R12 * S2ₜ + dynamics_tp1' * L1ₜ₊₁ * dynamics_tp1
+    L2 = Q2 + S1ₜ' * R21 * S1ₜ + S2ₜ' * R22 * S2ₜ + dynamics_tp1' * L2ₜ₊₁ * dynamics_tp1
+    return [S1ₜ, S2ₜ, L1, L2]
 end
+
 
 # Solve a finite horizon, discrete time LQ game to feedback Stackelberg equilibrium.
 # Returns feedback matrices P[player][:, :, time]
@@ -51,16 +41,14 @@ function solve_lq_stackelberg_feedback(
     A = dyn.A
     B_leader = dyn.Bs[leader_idx]
     B_follower = dyn.Bs[follower_idx]
+
     Q_leader = costs[leader_idx].Q
     Q_follower = costs[follower_idx].Q
-    Rs = [costs[leader_idx].Rs[leader_idx], costs[leader_idx].Rs[leader_idx]]
-    Rs[leader_idx] = costs[leader_idx].Rs[leader_idx]
-    Rs[follower_idx] = costs[follower_idx].Rs[follower_idx]
 
-    # TODO: Change the incentives later, but for now it's zero.
-    R₁₂ = zeros(udim(dyn, leader_idx), udim(dyn, follower_idx))
-    # This one can be 0.
-    R₂₁ = zeros(udim(dyn, follower_idx), udim(dyn, leader_idx))
+    R₁₁ = costs[leader_idx].Rs[leader_idx]
+    R₂₂ = costs[follower_idx].Rs[follower_idx]
+    R₁₂ = costs[leader_idx].Rs[follower_idx]
+    R₂₁ = costs[follower_idx].Rs[leader_idx]
 
     # Define recursive variables and initialize variables.
     all_Ss = [zeros(udim(dyn, i), num_states, horizon) for i in 1:num_players]
@@ -75,53 +63,13 @@ function solve_lq_stackelberg_feedback(
         # Aₖ = ...
         Lₖ₊₁ = [all_Ls[leader_idx][:, :, kk+1], all_Ls[follower_idx][:, :, kk+1]]
 
-        # 1. Compute Sₖ for each player.
-        common_ctrl_cost_term = I + B_follower' * Lₖ₊₁[follower_idx] * B_follower
+        # Run recursive computation for one step.
+        outputs = compute_stackelberg_recursive_step(A, B_leader, B_follower, Q_leader, Q_follower, Lₖ₊₁[leader_idx], Lₖ₊₁[follower_idx], R₁₁, R₂₂, R₁₂, R₂₁)
 
-        # Attempt 1 - Basar
-        G₁ = I + Lₖ₊₁[follower_idx] * B_follower * B_follower'
-        G₂ = I + B_follower * B_follower' * Lₖ₊₁[follower_idx]
-        G₃  = I + B_follower' * Lₖ₊₁[follower_idx] * B_follower
-        H  = B_leader' * inv(G₁) * Lₖ₊₁[leader_idx] * inv(G₂) * B_leader
-        J  = B_leader' * Lₖ₊₁[follower_idx]' * B_follower * inv(G₃) * R₁₂ * inv(G₃) * B_follower' * Lₖ₊₁[follower_idx] * B_leader
-        M  = inv(G₁) * Lₖ₊₁[leader_idx] * G₂
-        N  = Lₖ₊₁[follower_idx]' * B_follower * inv(G₃) * R₁₂ * inv(G₃) * B_follower' * Lₖ₊₁[follower_idx] 
-        S1ₖ = inv(H * J + I) * B_leader' * (M + N) * A
-
-        # Attempt 2 - self-derived with control costs.
-        # G₃  = I + B_follower' * Lₖ₊₁[follower_idx] * B_follower
-        # D₂ = inv(G₃) * B_follower' * Lₖ₊₁[follower_idx] * B_leader
-        # F₁ = B_leader - B_follower * D₂
-        # F₂ = I - B_follower * inv(G₃) * B_follower' * Lₖ₊₁[follower_idx]
-
-        # add1 = D₂ * R₁₂ * inv(G₃) * B_follower' * Lₖ₊₁[follower_idx]
-        # add2 = F₁' * Lₖ₊₁[leader_idx] * F₂
-        # common_term = add1 + add2
-        # S1ₖ = inv(Rs[leader_idx] + common_term * B_leader) * common_term * A
-
-        all_Ss[leader_idx][:, :, kk] = S1ₖ
-
-
-        # checked
-        S2ₖ = (inv(common_ctrl_cost_term)
-              * B_follower'
-              * Lₖ₊₁[follower_idx]
-              * (A - B_leader * S1ₖ))
-        all_Ss[follower_idx][:, :, kk] = S2ₖ
-
-        # 2. Compute feedback matrices Lₖ.
-        ẋ = A - B_leader * S1ₖ - B_follower * S2ₖ
-
-        all_Ls[leader_idx][:, :, kk] = ẋ' * Lₖ₊₁[leader_idx] * ẋ
-                                       + S1ₖ' * S1ₖ
-                                       + S2ₖ' * R₁₂ * S2ₖ
-                                       + Q_leader
-
-        all_Ls[follower_idx][:, :, kk] = ẋ' * Lₖ₊₁[follower_idx] * ẋ
-                                         + S2ₖ' * S2ₖ
-                                         + S1ₖ' * R₂₁ * S1ₖ
-                                         + Q_follower
-        # recurse!
+        all_Ss[leader_idx][:, :, kk] = outputs[1]
+        all_Ss[follower_idx][:, :, kk] = outputs[2]
+        all_Ls[leader_idx][:, :, kk] = outputs[3]
+        all_Ls[follower_idx][:, :, kk] = outputs[4]
     end
 
     return all_Ss, all_Ls
