@@ -5,11 +5,9 @@ using StackelbergControlHypothesesFiltering
 using Test: @test, @testset
 using Random: seed!
 
-
-# Tests to write:
+# (TODO: hamzah) Tests to write:
 # 1. Try it one 2-step horizon.
 # 2. Design a game with one state.
-
 
 seed!(0)
 
@@ -110,29 +108,16 @@ seed!(0)
             # Perturb the leader input u1 at the current time.
             ũs[leader_idx][:, tt] += ϵ * randn(udim(dyn, leader_idx))
 
-            # Resolve for the follower input at the current time.
+            # Re-solve for the optimal follower input given the perturbed leader trajectory.
             B₂ = dyn.Bs[follower_idx]
             G = costs[follower_idx].Rs[follower_idx] + B₂' * Ls[follower_idx][:, :, tt+1] * B₂
             ũ1ₜ = ũs[leader_idx][:, tt]
             ũ2ₜ = - inv(G) * B₂' * Ls[follower_idx][:, :, tt+1] * (dyn.A * xs[:,tt] + B₁ * ũ1ₜ)
             ũs[follower_idx][:, tt] = ũ2ₜ
 
-            # The cost computed as x_t^T * L^1_tt x_t for at time tt - not used in the test.
-            # TODO(hamzah) - remove after figuring out discrepancy between costs.
-            opt_P1_cost_1 = xs[:, tt]' * Ls[leader_idx][:, :, tt] * xs[:, tt]
-
-            # The cost computed manually for optimal inputs using
-            # x_t^T Q_t x_t^T + ... + <control costs> + ... + x_{t+1}^T * L^1_{t+1} x_{t+1}.
-            # TODO(hamzah) - remove from loop
-            u1ₜ = us[leader_idx][:, tt]
-            u2ₜ = us[follower_idx][:, tt]
-            opt_P1_cost = xs[:, tt]' * costs[leader_idx].Q * xs[:, tt]
-            opt_P1_cost += u1ₜ' * costs[leader_idx].Rs[leader_idx] * u1ₜ
-            if haskey(costs[leader_idx].Rs, follower_idx)
-                opt_P1_cost += u2ₜ' * costs[leader_idx].Rs[follower_idx] * u2ₜ
-            end
-            xₜ₊₁ = xs[:, tt+1] #dyn.A * xs[:, tt] + dyn.Bs[leader_idx] * u1ₜ + dyn.Bs[follower_idx] * ũ2ₜ
-            opt_P1_cost += xₜ₊₁' * Ls[leader_idx][:, :, tt+1] * xₜ₊₁
+            # The cost of the solution trajectory, computed as x_t^T * L^1_tt x_t for at time tt.
+            # We test the accuracy of this cost in `CheckStackelbergCostsAreConsistentAtEquilibrium`.
+            opt_P1_cost = xs[:, tt]' * Ls[leader_idx][:, :, tt] * xs[:, tt]
 
             # The cost computed manually for perturbed inputs using
             # x_t^T Q_t x_t^T + ... + <control costs> + ... + x_{t+1}^T * L^1_{t+1} x_{t+1}.
@@ -144,28 +129,15 @@ seed!(0)
             x̃ₜ₊₁ = dyn.A * xs[:, tt] + dyn.Bs[leader_idx] * ũ1ₜ + dyn.Bs[follower_idx] * ũ2ₜ
             new_P1_cost += x̃ₜ₊₁' * Ls[leader_idx][:, :, tt+1] * x̃ₜ₊₁
 
-
-            # println(tt, " - one step + future value - ", new_P1_cost, " ", opt_P1_cost, " ", opt_P1_cost_1)
+            # The costs from time t+1 of the perturbed and optimal trajectories should also satisfy this condition.
             @test new_P1_cost ≥ opt_P1_cost
 
             x̃s = unroll_raw_controls(dyn, ũs, x₁)
             new_stack_costs = [evaluate(c, x̃s, ũs) for c in costs]
             optimal_stackelberg_costs = [evaluate(c, xs, us) for c in costs]
-            # println(tt, " - entire traj evaluated - ", new_stack_costs[leader_idx], " ", optimal_stackelberg_costs[leader_idx])
+
+            # This test evaluates the cost for the entire perturbed trajectory against the optimal cost.
             @test new_stack_costs[leader_idx] ≥ optimal_stackelberg_costs[leader_idx]
-
-            ii = leader_idx
-            jj = follower_idx
-            state_cost = x̃s[:, tt]' * costs[ii].Q * x̃s[:, tt]
-            self_control_cost = ũs[ii][:, tt]' * costs[ii].Rs[ii] * ũs[ii][:, tt]
-            cross_control_cost = ũs[jj][:, tt]' * costs[ii].Rs[jj] * ũs[jj][:, tt]
-            future_cost = x̃s[:, tt+1]' * Ls[ii][:, :, tt+1] * x̃s[:, tt+1]
-            manual_cost = state_cost + self_control_cost + cross_control_cost + future_cost
-            auto_cost = x̃s[:, tt]' * Ls[ii][:, :, tt] * x̃s[:, tt]
-
-            # @test manual_cost ≈ auto_cost
-
-            println(tt, " - stack 1 (manual, auto) ", manual_cost, " ", auto_cost)
         end
     end
 
@@ -209,23 +181,16 @@ seed!(0)
             jj = 3 - ii
             for tt in 1:horizon-1
                 state_cost = xs[:, tt]' * costs[ii].Q * xs[:, tt]
-                # TODO(hamzah) Add the cross-control cost term?
                 self_control_cost = us[ii][:, tt]' * costs[ii].Rs[ii] * us[ii][:, tt]
                 cross_control_cost = us[jj][:, tt]' * costs[ii].Rs[jj] * us[jj][:, tt]
                 future_cost = xs[:, tt+1]' * Ls[ii][:, :, tt+1] * xs[:, tt+1]
 
-                # println("L ", tt, " - ", det(Ls[:, tt]))
-
                 manual_cost = state_cost + self_control_cost + cross_control_cost + future_cost
                 computed_cost = xs[:, tt]' * Ls[ii][:, :, tt] * xs[:, tt]
 
-                println(tt, " ", ii, " - stack (manual, auto) ", manual_cost, " ", computed_cost)
-                println(tt, " manual (self ctrl, cross ctrl, future): ", self_control_cost, " ", cross_control_cost, " ", future_cost)
-
+                # The manually recursion at time t should match the computed L cost at time t.
                 @test manual_cost ≈ computed_cost
             end
-            # @test false
         end
     end
-
 end
