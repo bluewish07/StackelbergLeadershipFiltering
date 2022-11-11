@@ -42,6 +42,7 @@ function coupling_example()
     Q₁[7, 7] = 1.0
     c₁ = Cost(Q₁)
     add_control_cost!(c₁, 1, 1 * diagm([1, 1]))
+    add_control_cost!(c₁, 2, zeros(2, 2)))
 
     Q₂ = zeros(8, 8)
     Q₂[1, 1] = 1.0
@@ -54,6 +55,7 @@ function coupling_example()
     Q₂[7, 3] = -1.0
     c₂ = Cost(Q₂)
     add_control_cost!(c₂, 2, 1 * diagm([1, 1]))
+    add_control_cost!(c₂, 1, zeros(2, 2)))
 
     costs = [c₁, c₂]
 
@@ -66,7 +68,7 @@ function coupling_example()
 
     Ps = solve_lq_nash_feedback(dyn, costs, horizon)
     xs_nash_feedback, us_nash_feedback = unroll_feedback(dyn, Ps, x₁)
-    Ss = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
+    Ss, Ls = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
     xs_stackelberg_feedback, us_stackelberg_feedback = unroll_feedback(dyn, Ss, x₁)
 
     return xs_nash_feedback, us_nash_feedback, xs_stackelberg_feedback, us_stackelberg_feedback

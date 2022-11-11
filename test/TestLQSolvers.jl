@@ -24,6 +24,7 @@ seed!(0)
           0 0 0  0]
     c₁ = Cost(Q₁)
     add_control_cost!(c₁, 1, ones(1, 1))
+    add_control_cost!(c₁, 2, zeros(1, 1))
 
     Q₂ = [1.  0 -1 0;
           0  0 0  0;
@@ -31,6 +32,7 @@ seed!(0)
           0  0 0  0]
     c₂ = Cost(Q₂)
     add_control_cost!(c₂, 2, ones(1, 1))
+    add_control_cost!(c₂, 1, zeros(1, 1))
 
     costs = [c₁, c₂]
 
@@ -64,7 +66,7 @@ seed!(0)
     # Ensure that the feedback solution satisfies Stackelberg conditions of optimality
     # for each player, holding others' strategies fixed.
     @testset "CheckFeedbackSatisfiesStackelberg" begin
-        Ss = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
+        Ss, Ls = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
         xs, us = unroll_feedback(dyn, Ss, x₁)
         optimal_stackelberg_costs = [evaluate(c, xs, us) for c in costs]
 
