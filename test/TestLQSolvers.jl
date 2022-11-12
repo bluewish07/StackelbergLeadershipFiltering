@@ -1,8 +1,13 @@
 # Unit tests for LQ Nash solvers.
 
+using LinearAlgebra
 using StackelbergControlHypothesesFiltering
 using Test: @test, @testset
 using Random: seed!
+
+# (TODO: hamzah) Tests to write:
+# 1. Try it one 2-step horizon.
+# 2. Design a game with one state.
 
 seed!(0)
 
@@ -42,8 +47,10 @@ seed!(0)
 
     # Ensure that the feedback solution satisfies Nash conditions of optimality
     # for each player, holding others' strategies fixed.
+    # Note: This test, as formulated, allows some false positive cases. See Basar and Olsder (Eq. 3.22) for the exact
+    #       conditions.
     @testset "CheckFeedbackSatisfiesNash" begin
-        Ps = solve_lq_nash_feedback(dyn, costs, horizon)
+        Ps, Zs = solve_lq_nash_feedback(dyn, costs, horizon)
         xs, us = unroll_feedback(dyn, Ps, x₁)
         nash_costs = [evaluate(c, xs, us) for c in costs]
 
@@ -63,63 +70,134 @@ seed!(0)
     end
 
 
+    # Ensure that the costs match up at each time step with manually calculate cost matrices.
+    @testset "CheckNashCostsAreConsistentAtEquilibrium" begin
+        Ps, Zs = solve_lq_nash_feedback(dyn, costs, horizon)
+        xs, us = unroll_feedback(dyn, Ps, x₁)
+
+        # Compute the costs using the t+1 cost matrix and compare with the cost using the cost matrix at time t.
+        for ii in 1:2
+            for tt in 1:horizon-1
+                manual_cost = xs[:, tt]' * costs[ii].Q * xs[:, tt]
+                manual_cost += us[ii][:, tt]' * costs[ii].Rs[ii] * us[ii][:, tt]
+                manual_cost += xs[:, tt+1]' * Zs[ii][:, :, tt+1] * xs[:, tt+1]
+                computed_cost = xs[:, tt]' * Zs[ii][:, :, tt] * xs[:, tt]
+
+                @test manual_cost ≈ computed_cost
+            end
+        end
+    end
+
+
     # Ensure that the feedback solution satisfies Stackelberg conditions of optimality
-    # for each player, holding others' strategies fixed.
-    @testset "CheckFeedbackSatisfiesStackelberg" begin
+    # for player 1, holding others' strategies fixed.
+    # Note: This test, as formulated, allows some false positive cases. See Khan and Fridovich-Keil 2023 for the exact
+    #       conditions.
+    @testset "CheckFeedbackSatisfiesStackelbergEquilibriumForLeader" begin
         Ss, Ls = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
         xs, us = unroll_feedback(dyn, Ss, x₁)
         optimal_stackelberg_costs = [evaluate(c, xs, us) for c in costs]
 
-        # Perturb each P1 strategy a little bit, resolve for P2's input, and ensure the optimal cost for P1 is less than
-        # the alterred cost for P1.
+        # Define some useful constants.
         ϵ = 1e-1
-        leader_idx = 1
-        follower_idx = 2
+        leader_idx = stackelberg_leader_idx
+        follower_idx = 3 - stackelberg_leader_idx
         num_players = follower_idx
 
-        # At each time step running backwards, perturb P1 at tt, solve the LQR problem for P2 with it, and validate the
-        # new costs are higher than the old ones.
         for tt in horizon-1:-1:1
 
-            # Optimal P2s given optimal P1s.
-            P̃2s = deepcopy(Ss)[follower_idx]
+            # Copy the things we will alter.
+            ũs = deepcopy(us)
 
-            # Reset P1s to the optimal P1s and add noise to P1's feedback matrices at tt.
-            P̃1s = deepcopy(Ss)[leader_idx]
-            P̃1s[:, :, tt] += ϵ * randn(udim(dyn, leader_idx), xdim(dyn))
+            # Perturb the leader input u1 at the current time.
+            ũs[leader_idx][:, tt] += ϵ * randn(udim(dyn, leader_idx))
 
-            # Create new dynamics and cost objects for use in the LQR solver.
-            F = dyn.A - dyn.Bs[leader_idx] * P̃1s[:, :, tt]
-            dyn_P2_lqr = Dynamics(F, [dyn.Bs[follower_idx]])
-            costs_P2_lqr = Cost(costs[follower_idx].Q)
-            add_control_cost!(costs_P2_lqr, 1, costs[follower_idx].Rs[follower_idx])
+            # Re-solve for the optimal follower input given the perturbed leader trajectory.
+            B₂ = dyn.Bs[follower_idx]
+            G = costs[follower_idx].Rs[follower_idx] + B₂' * Ls[follower_idx][:, :, tt+1] * B₂
+            ũ1ₜ = ũs[leader_idx][:, tt]
+            ũ2ₜ = - G \ (B₂' * Ls[follower_idx][:, :, tt+1] * (dyn.A * xs[:,tt] + B₁ * ũ1ₜ))
+            ũs[follower_idx][:, tt] = ũ2ₜ
 
-            # Solve the LQR problem from tt to horizon. Since P2 and P1 are optimal until tt, these should be otherwise
-            # the same before tt.
-            P̃2s[:, :, tt:horizon] = solve_lqr_feedback(dyn_P2_lqr, costs_P2_lqr, horizon - tt + 1)
+            # The cost of the solution trajectory, computed as x_t^T * L^1_tt x_t for at time tt.
+            # We test the accuracy of this cost in `CheckStackelbergCostsAreConsistentAtEquilibrium`.
+            opt_P1_cost = xs[:, tt]' * Ls[leader_idx][:, :, tt] * xs[:, tt]
 
-            # Unroll the states again from the initial state.
-            P̃s = [P̃1s, P̃2s]
-            x̃s, ũs = unroll_feedback(dyn, P̃s, x₁)
+            # The cost computed manually for perturbed inputs using
+            # x_t^T Q_t x_t^T + ... + <control costs> + ... + x_{t+1}^T * L^1_{t+1} x_{t+1}.
+            state_cost = xs[:, tt]' * costs[leader_idx].Q * xs[:, tt]
+            self_control_cost = ũ1ₜ' * costs[leader_idx].Rs[leader_idx] * ũ1ₜ
+            if haskey(costs[leader_idx].Rs, follower_idx)
+                cross_control_cost = ũ2ₜ' * costs[leader_idx].Rs[follower_idx] * ũ2ₜ
+            else
+                cross_control_cost = 0
+            end
+            x̃ₜ₊₁ = dyn.A * xs[:, tt] + dyn.Bs[leader_idx] * ũ1ₜ + dyn.Bs[follower_idx] * ũ2ₜ
+            future_cost = x̃ₜ₊₁' * Ls[leader_idx][:, :, tt+1] * x̃ₜ₊₁
+            new_P1_cost = state_cost + self_control_cost + cross_control_cost + future_cost
 
-            # Validate the new costs are higher than the optimal ones for the trajectory up to tt.
+            # The costs from time t+1 of the perturbed and optimal trajectories should also satisfy this condition.
+            @test new_P1_cost ≥ opt_P1_cost
+
+            x̃s = unroll_raw_controls(dyn, ũs, x₁)
             new_stack_costs = [evaluate(c, x̃s, ũs) for c in costs]
             optimal_stackelberg_costs = [evaluate(c, xs, us) for c in costs]
+
+            # This test evaluates the cost for the entire perturbed trajectory against the optimal cost.
             @test new_stack_costs[leader_idx] ≥ optimal_stackelberg_costs[leader_idx]
         end
+    end
+
+
+    # Ensure that the feedback solution satisfies Stackelberg conditions of optimality
+    # for player 2, holding others' strategies fixed.
+    @testset "CheckFeedbackSatisfiesStackelbergEquilibriumForFollower" begin
+        Ss, Ls = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
+        xs, us = unroll_feedback(dyn, Ss, x₁)
+        optimal_stackelberg_costs = [evaluate(c, xs, us) for c in costs]
+
+        # Define some useful constants.
+        ϵ = 1e-1
+        leader_idx = stackelberg_leader_idx
+        follower_idx = 3 - stackelberg_leader_idx
+        num_players = follower_idx
 
         # Perturb each optimized P2 strategy a little bit and confirm that cost only increases for player 2.
-        ii = 2
-        jj = 1
-        for tt in 1:horizon
+        leader_idx = 1
+        follower_idx = 2
+        for tt in 1:horizon-1
             P̃s = deepcopy(Ss)
-            P̃s[ii][:, :, tt] += ϵ * randn(udim(dyn, ii), xdim(dyn))
+            P̃s[follower_idx][:, :, tt] += ϵ * randn(udim(dyn, follower_idx), xdim(dyn))
 
             x̃s, ũs = unroll_feedback(dyn, P̃s, x₁)
             new_stack_costs = [evaluate(c, x̃s, ũs) for c in costs]
-            @test new_stack_costs[ii] ≥ optimal_stackelberg_costs[ii]
+            @test new_stack_costs[follower_idx] ≥ optimal_stackelberg_costs[follower_idx]
         end
-
     end
 
+
+    # Ensure that the costs match up at each time step with manually calculate cost matrices.
+    @testset "CheckStackelbergCostsAreConsistentAtEquilibrium" begin
+        Ss, Ls = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
+        xs, us = unroll_feedback(dyn, Ss, x₁)
+
+        # For each player, compute the costs using the t+1 cost matrix and compare with the cost using the cost matrix
+        # at time t.
+
+        for ii in 1:2
+            jj = 3 - ii
+            for tt in 1:horizon-1
+                state_cost = xs[:, tt]' * costs[ii].Q * xs[:, tt]
+                self_control_cost = us[ii][:, tt]' * costs[ii].Rs[ii] * us[ii][:, tt]
+                cross_control_cost = us[jj][:, tt]' * costs[ii].Rs[jj] * us[jj][:, tt]
+                future_cost = xs[:, tt+1]' * Ls[ii][:, :, tt+1] * xs[:, tt+1]
+
+                manual_cost = state_cost + self_control_cost + cross_control_cost + future_cost
+                computed_cost = xs[:, tt]' * Ls[ii][:, :, tt] * xs[:, tt]
+
+                # The manually recursion at time t should match the computed L cost at time t.
+                @test manual_cost ≈ computed_cost
+            end
+        end
+    end
 end

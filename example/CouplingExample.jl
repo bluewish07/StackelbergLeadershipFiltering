@@ -17,23 +17,21 @@ function coupling_example()
     # Dynamics (Euler-discretized double integrator equations with Δt = 0.1s).
     # State for each player is layed out as [x, ẋ, y, ẏ].
     Ã = [1 0.1 0 0;
-     0 1   0 0;
-     0 0   1 0.1;
-     0 0   0 1]
+         0 1   0 0;
+         0 0   1 0.1;
+         0 0   0 1]
     A = vcat(hcat(Ã, zeros(4, 4)), hcat(zeros(4, 4), Ã))
 
     B₁ = vcat([0   0;
-           0.1 0;
-           0   0;
-           0   0.1],
-          zeros(4, 2)
-          )
+               0.1 0;
+               0   0;
+               0   0.1],
+               zeros(4, 2))
     B₂ = vcat(zeros(4, 2),
-          [0   0;
-           0.1 0;
-           0   0;
-           0   0.1]
-          )
+              [0   0;
+               0.1 0;
+               0   0;
+               0   0.1])
     dyn = Dynamics(A, [B₁, B₂])
 
     # Costs reflecting the preferences above.
@@ -42,7 +40,7 @@ function coupling_example()
     Q₁[7, 7] = 1.0
     c₁ = Cost(Q₁)
     add_control_cost!(c₁, 1, 1 * diagm([1, 1]))
-    add_control_cost!(c₁, 2, zeros(2, 2)))
+    add_control_cost!(c₁, 2, zeros(2, 2))
 
     Q₂ = zeros(8, 8)
     Q₂[1, 1] = 1.0
@@ -55,7 +53,7 @@ function coupling_example()
     Q₂[7, 3] = -1.0
     c₂ = Cost(Q₂)
     add_control_cost!(c₂, 2, 1 * diagm([1, 1]))
-    add_control_cost!(c₂, 1, zeros(2, 2)))
+    add_control_cost!(c₂, 1, zeros(2, 2))
 
     costs = [c₁, c₂]
 
@@ -66,9 +64,9 @@ function coupling_example()
     # Solve over a horizon of 100 timesteps.
     horizon = 100
 
-    Ps = solve_lq_nash_feedback(dyn, costs, horizon)
+    Ps, _ = solve_lq_nash_feedback(dyn, costs, horizon)
     xs_nash_feedback, us_nash_feedback = unroll_feedback(dyn, Ps, x₁)
-    Ss, Ls = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
+    Ss, _ = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
     xs_stackelberg_feedback, us_stackelberg_feedback = unroll_feedback(dyn, Ss, x₁)
 
     return xs_nash_feedback, us_nash_feedback, xs_stackelberg_feedback, us_stackelberg_feedback

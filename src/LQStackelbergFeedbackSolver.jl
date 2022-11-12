@@ -63,6 +63,7 @@ function solve_lq_stackelberg_feedback(
         # Aₖ = ...
         Lₖ₊₁ = [all_Ls[leader_idx][:, :, kk+1], all_Ls[follower_idx][:, :, kk+1]]
 
+        # Run recursive computation for one step.
         outputs = compute_stackelberg_recursive_step(A, B_leader, B_follower, Q_leader, Q_follower, Lₖ₊₁[leader_idx], Lₖ₊₁[follower_idx], R₁₁, R₂₂, R₁₂, R₂₁)
 
         all_Ss[leader_idx][:, :, kk] = outputs[1]
