@@ -47,6 +47,8 @@ seed!(0)
 
     # Ensure that the feedback solution satisfies Nash conditions of optimality
     # for each player, holding others' strategies fixed.
+    # Note: This test, as formulated, allows some false positive cases. See Basar and Olsder (Eq. 3.22) for the exact
+    #       conditions.
     @testset "CheckFeedbackSatisfiesNash" begin
         Ps, Zs = solve_lq_nash_feedback(dyn, costs, horizon)
         xs, us = unroll_feedback(dyn, Ps, x₁)
@@ -89,6 +91,8 @@ seed!(0)
 
     # Ensure that the feedback solution satisfies Stackelberg conditions of optimality
     # for player 1, holding others' strategies fixed.
+    # Note: This test, as formulated, allows some false positive cases. See Khan and Fridovich-Keil 2023 for the exact
+    #       conditions.
     @testset "CheckFeedbackSatisfiesStackelbergEquilibriumForLeader" begin
         Ss, Ls = solve_lq_stackelberg_feedback(dyn, costs, horizon, stackelberg_leader_idx)
         xs, us = unroll_feedback(dyn, Ss, x₁)
@@ -112,7 +116,7 @@ seed!(0)
             B₂ = dyn.Bs[follower_idx]
             G = costs[follower_idx].Rs[follower_idx] + B₂' * Ls[follower_idx][:, :, tt+1] * B₂
             ũ1ₜ = ũs[leader_idx][:, tt]
-            ũ2ₜ = - inv(G) * B₂' * Ls[follower_idx][:, :, tt+1] * (dyn.A * xs[:,tt] + B₁ * ũ1ₜ)
+            ũ2ₜ = - G \ (B₂' * Ls[follower_idx][:, :, tt+1] * (dyn.A * xs[:,tt] + B₁ * ũ1ₜ))
             ũs[follower_idx][:, tt] = ũ2ₜ
 
             # The cost of the solution trajectory, computed as x_t^T * L^1_tt x_t for at time tt.
