@@ -1,0 +1,379 @@
+\documentclass[11pt]{article}
+\usepackage{subfigure,wrapfig,graphicx,booktabs,fancyhdr,amsmath,amsfonts}
+\usepackage{bm,amssymb,amsmath,amsthm,wasysym,color,fullpage,setspace,multirow}
+\newcommand{\vb}{\boldsymbol}
+\newcommand{\vbh}[1]{\hat{\boldsymbol{#1}}}
+\newcommand{\vbb}[1]{\bar{\boldsymbol{#1}}}
+\newcommand{\vbt}[1]{\tilde{\boldsymbol{#1}}}
+\newcommand{\vbs}[1]{{\boldsymbol{#1}}^*}
+\newcommand{\vbd}[1]{\dot{{\boldsymbol{#1}}}}
+\newcommand{\vbdd}[1]{\ddot{{\boldsymbol{#1}}}}
+\newcommand{\by}{\times}
+\newcommand{\tr}{{\rm tr}}
+\newcommand{\cpe}[1]{\left[{#1} \times \right]}
+\newcommand{\sfrac}[2]{\textstyle \frac{#1}{#2}}
+\newcommand{\ba}{\begin{array}}
+\newcommand{\ea}{\end{array}}
+\renewcommand{\earth}{\oplus}
+\newcommand{\sinc}{{\rm \hspace{0.5mm} sinc}}
+\newcommand{\tf}{\tilde{f}}
+\newcommand{\tbox}[1]{\noindent \fbox{\parbox{\textwidth}{#1}}}
+\newcommand{\T}{\intercal}
+\DeclareMathAlphabet{\mathpzc}{OT1}{pzc}{m}{it}
+\renewcommand\d[1]{\partial{#1}}
+\newcommand\dd[2]{\frac{\partial#1}{\partial#2}}
+\newcommand\ddd[2]{\frac{\partial^2#1}{\partial#2^2}}
+
+\def\doubleunderline#1{\underline{\underline{#1}}}
+
+\newcommand\todo[1]{\textcolor{red}{TODO: #1}}
+
+\title{2-Player LQ Stackelberg Game Derivation}
+\author{Hamzah Khan} \date{November 5, 2022}
+
+\begin{document}
+\maketitle
+
+\section{Problem Formulation}
+Assume we are operating in discrete time with the following linear system:
+
+\begin{equation}
+\label{eq:2p-dynamics}
+x_{t+1} = A_t x_t + B^{1}_t u^{1}_t + B^{2}_t u^{2}_t.
+\end{equation}
+
+% \begin{equation}
+% \label{eq:dynamics}
+% x_{t+1} = A_t x_t + \sum_{j=1}^N B^j_t u^j_t.
+% \end{equation}
+
+Furthermore, let us assume a feedback information structure where $u^{i*}_t$ depends on $t$ and $x_t$. This assumption is an oversimplification for many interesting problems (consider any system without full state state observability), but it is frequently closer to reality than an open-loop information structure.
+
+We have two players attempting to minimize quadratic costs over some horizon $T$. Let us assume that player 1 is able to predict what player 2 will do at time $t$ in response to the input $u^1_t$. This implies that when we optimize for player 1's objective, we assume that player 2's input $u^2_t(u^1_t)$ is a function of $u^1_t$. For player 2's objective, we treat $u^2_t$ as a variable.
+
+\begin{equation}
+\label{eq:p1-objective}
+J^1 = \frac{1}{2} \sum_{t=1}^T x^\T_t Q^1_t x_t + u^{1\T}_t R^{11}_t u^1_t + u^{2\T}_t(u^1_t) R^{12}_t u^2_t(u^1_t)
+\end{equation}
+
+\begin{equation}
+\label{eq:p2-objective}
+J^2 = \frac{1}{2} \sum_{t=1}^T x^\T_t Q^2_t x_t + u^{2\T}_t R^{22}_t u^2_t + u^{1\T}_t R^{21}_t u^1_t
+\end{equation}
+
+The coupled optimization for each player then takes the following form.
+\begin{equation}
+\label{eq:optim-problem}
+\begin{split}
+& \min_{u^{i}_{1:T}} J^i\left(x_{1:T}, u^1_{1:T}, u^2_{1:T} \right) \\
+& \text{s.t. } x_{t+1} = A_t x_t + B^{1}_t u^{1}_t + B^{2}_t u^{2}_t
+\end{split}
+\end{equation}
+
+We present the solution to this Stackelberg game in the next section.
+
+\section{Solution}
+We are looking for a \emph{feedback} equilibrium, i.e. a set of functions $\gamma^i_t$ such that $u^i_t \equiv \gamma^i_t(x_t)$.
+
+If every player is operating at Stackelberg, their value functions and associated optimal controls should be mutually consistent. Furthermore, we can infer that each value function $V^i_t$ is quadratic because each is a sum of quadratic functions. Therefore, we see that the optimal controls for each player, at each time, will be an affine function of the state. Let us presuppose the form of the value function and derive the form of the control law and thereby the specific value functions themselves. Our derivation will be constructive in nature and we begin by supposing the value functions have quadratic forms, i.e.
+\begin{equation}
+\label{eq:value-fn}
+V^i_t(x_t) = \frac{1}{2} x^\T_t L^i_t x_t,
+\end{equation}
+where $L^i_t > 0, L^{i}_t = L^{i\T}_t, L^i_{T+1} = 0$.
+
+Furthermore, we will soon see that the optimal choice for $u^i_t$ will be a linear function of the state $x_t$, i.e.
+\begin{equation}
+\label{eq:control-fn}
+u^{i*}_t(x_t) = -S^i_t x_t,
+\end{equation}
+where $S^i_t > 0, S^i_t = S^{i\T}_t$
+
+From here, we solve for the four unknowns $S^1_t, S^2_t, L^1_t, L^2_t$ to obtain recursions that let us solve this dynamic programming problem. We note that the leader and follower cases are different and thus we solve them separately.
+
+
+\subsection{Solving for Player 2's Unknowns}
+\label{ssec:solving-p2-unknowns}
+We start by writing down the Hamilton-Jacobi equations for player 2's value function:
+
+\begin{equation}
+\label{eq:p2-hamilton-jacobi-eq}
+V^2_t(x_{t}) = \min_{u^2_t} \left\{ \frac{1}{2} \left[ x_t^\T Q^2_t x_t + u^{2\T}_t R^{22}_t u^2_t + u^{1\T}_t R^{21}_t u^1_t \right] + V^2_{t+1}(x_{t+1}) \right\}; ~~~~~~~~~ u^1_t \text{ given}
+\end{equation}
+\begin{equation}
+\label{eq:p2-hamilton-jacobi-eq-expanded}
+= \min_{u^2_t} \left\{ \frac{1}{2} \left[ x_t^\T Q^2_t x_t + u^{2\T}_t R^{22}_t u^2_t + u^{1\T}_t R^{21}_t u^1_t \right] + V^2_{t+1}(A_t x_t + B^{1}_t u^{1}_t + B^{2}_t u^{2}_t) \right\}; ~~ u^1_t \text{ given},
+\end{equation}
+with final value $V^i_{T+1}(x_{t+1}) = 0$.
+
+At any time $t$, we can plug (\ref{eq:value-fn}) into (\ref{eq:p2-hamilton-jacobi-eq-expanded}):
+\begin{equation}
+\label{eq:p2-hamilton-jacobi-eq-expanded-2}
+V^2_t(x_t) = \frac{1}{2} \min_{u^2_t} \left\{ x_t^\T Q^2_t x_t
+    + u^{2\T}_t R^{22}_t u^2_t
+    + u^{1\T}_t R^{21}_t u^1_t
+    + \left(A_t x_t + B^{1}_t u^{1}_t + B^{2}_t u^{2}_t\right)^\T L^2_{t+1} \left( A_t x_t + B^{1}_t u^{1}_t + B^{2}_t u^{2}_t \right) \right\}
+\end{equation}
+
+We can find the feedback control law by finding the minimizer of (\ref{eq:p2-hamilton-jacobi-eq-expanded-2}). To do so, we assume strong convexity and set the gradient to 0 as follows:
+% \[ 0 = \dd{V^2_t}{u^2_t} = \frac{1}{2} \left[ 0 + 2 R^{22}_t u^{2*}_t + B^{2\T}_t L^2_{t+1} \left( A_t x_t + B^1_t u^1_t + B^2_t u^{2*}_t \right) + \left(A_t x_t + B^1_t u^1_t + B^2_t u^{2*}_t\right)^\T L^2_{t+1} B^2_t \right] \]
+
+\begin{equation}
+\label{eq:p2-hamilton-jacobi-eq-minimizer-1}
+0 = R^{22}_t u^{2*}_t + B^{2\T}_t L^2_{t+1} \left( A_t x_t + B^1_t u^1_t + B^2_t u^{2*}_t \right).
+\end{equation}
+We use the symmetry of $L^2_{t+1}$ to rearrange terms in this expression. Note that we can remove $\min_{u^2_t}$ since we already satisfy it through the first-order conditions. We take note of one more relationship before proceeding - given the control law we assume in (\ref{eq:control-fn}), we see that
+\begin{equation}
+\label{eq:control-law-recursion}
+x_{t+1} = A_t x_t + B^{1}_t u^{1*}_t + B^{2}_t u^{2*}_t = (A_t - B^1_t S^1_t - B^2_t S^2_t)x_t
+\end{equation}
+
+Plugging in equations (\ref{eq:control-fn}) and (\ref{eq:control-law-recursion}) to (\ref{eq:p2-hamilton-jacobi-eq-minimizer-1}), we then rewrite it in the form:
+\begin{equation}
+\label{eq:u2-optimal}
+u^{2*}_t = -\left[R^{22}_t + B^{2\T}_t L^2_{t+1} B^2_t\right]^{-1} B^{2\T}_t L^2_{t+1} \left( A_t - B^1_t S^1_t \right) x_t,
+\end{equation}
+which fits the form of the control law proposed in (\ref{eq:control-fn}) and from which we can extract $S^2_t$. Thus,
+\begin{equation}
+\label{eq:S2t-recursion}
+S^2_t = \left[R^{22}_t + B^{2\T}_t L^2_{t+1} B^2_t\right]^{-1} B^{2\T}_t L^2_{t+1} \left( A_t - B^1_t S^1_t \right).
+\end{equation}
+
+To identify $L^2_t$, we then plug $u^{i*}_t = -S^i_t x_t$ into $V^2_t$ to put the expression in the form we propose in (\ref{eq:value-fn}) and extract $L^2_t$:
+\begin{align*}
+V^2_t(x_{t}) &= \frac{1}{2}\left[ x_t^\T Q^2_t x_t + x_t^\T S_t^{2\T} R^{22}_t S^2_t x_t + x_t^\T S_t^{1\T} R^{21}_t S^1_t x_t + x_t^\T \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right)^\T L^2_{t+1} \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right) x_t \right] \\
+    &= \frac{1}{2} x^\T_t \left[ Q^2_t + S_t^{2\T} R^{22}_t S^2_t + S^{1\T}_t R^{21}_t S^1_t + \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right)^\T L^2_{t+1} \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right) \right] x_t.
+\end{align*}
+
+Thus, we see that
+\begin{equation}
+\label{eq:L2t-recursion}
+L^2_t = Q^2_t + S_t^{2\T} R^{22}_t S^2_t + S^{1\T}_t R^{21}_t S^1_t + \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right)^\T L^2_{t+1} \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right),
+\end{equation}
+where $L^i_{T+1} = Q^i_{T+1}$.
+
+
+\subsection{Solving for Player 1's Unknowns}
+\label{ssec:solving-p1-unknowns}
+
+Recall for player 1's value function, player 2's input $u^2_t(u^1_t)$ is a function of $u^1_t$. We can repeat the same process as in Section \ref{ssec:solving-p2-unknowns}, with a change in the derivation of the recursion based on our assumptions about the function $u^2_t(u^1_t)$. We start by writing down the Hamilton-Jacobi equations for player 1's value function:
+
+\begin{equation}
+\label{eq:p1-hamilton-jacobi-eq}
+V^1_t(x_{t}) = \min_{u^1_t} \left\{ \frac{1}{2} \left[ x_t^\T Q^1_t x_t + u^{1\T}_t R^{11}_t u^1_t + u^{2\T}_t(u^1_t) R^{12}_t u^2_t(u^1_t) \right] + V^1_{t+1}(x_{t+1}) \right\}
+\end{equation}
+\begin{equation}
+\label{eq:p1-hamilton-jacobi-eq-expanded}
+= \min_{u^1_t} \left\{ \frac{1}{2} \left[ x_t^\T Q^1_t x_t + u^{1\T}_t R^{11}_t u^1_t + u^{2\T}_t(u^1_t) R^{12}_t u^2_t(u^1_t) \right] + V^1_{t+1}(A_t x_t + B^{1}_t u^{1}_t + B^{2}_t u^{2}_t) \right\}
+\end{equation}
+with final value $V^1_{T+1}(x_{t+1}) = 0$.
+
+When we, under the same assumptions of strong convexity and set the gradient to 0, we find that we must apply the chain rule to compute the derivative because of the dependence of $u^2_t$ on $u^1_t$. We can now differentiate and solve for the minimum cost control $u^{1*}_t$ as we did for $u^{2*}_t$ in (\ref{eq:p2-hamilton-jacobi-eq-minimizer-1}):
+% \[ 0 = \dd{V^{1}_t}{u^{1}_t} = \frac{1}{2} \left[
+%     2 R^{11}_t u^{1*}_t 
+%     + \left(\dd{u^{2}_t}{u^{1}_t}\right)^\T R^{12}_t u^2_t(u^{1*}_t) + u^{2\T}_t(u^{1*}_t) R^{12}_t \dd{u^{2}_t}{u^{1}_t}
+%     \right.
+%     \]
+% \[ + \left(B^1_t + B^2_t \dd{u^{2}_t}{u^{1}_t} \right)^\T L^1_{t+1} \left( A_t x_t + B^1_t u^{1*}_t + B^2_t u^2_t(u^{1*}_t) \right)
+%      \]
+% \[ \left. + \left( A_t x_t + B^1_t u^{1*}_t + B^2_t u^2_t(u^{1*}_t) \right)^\T L^1_{t+1} \left(B^1_t + B^2_t \dd{u^{2}_t}{u^{1}_t} \right)
+%     \right] \]
+\begin{equation}
+\label{eq:p1-hamilton-jacobi-eq-minimizer-1}
+0 = \dd{V^{1}_t}{u^{1}_t} = R^{11}_t u^{1*}_t + u^{2\T}_t(u^{1*}_t) R^{12}_t \dd{u^{2}_t}{u^{1}_t} + \left(B^1_t + B^2_t \dd{u^{2}_t}{u^{1}_t} \right)^\T L^1_{t+1} \left( A_t x_t + B^1_t u^{1*}_t + B^2_t u^2_t(u^1_t) \right)
+\end{equation}
+
+We will need the derivative of $u^{2*}_t(u^1_t)$ with respect to $u^1_t$ later, so we compute that here using the chain rule:
+\begin{equation}
+\label{eq:chain-rule-u2-u1}
+\dd{u^{2}_t}{u^{1}_t} = -\left[R^{22}_t + B^{2\T}_t L^2_{t+1} B^2_t\right]^{-1} B^{2\T}_t L^2_{t+1} B^1_t.
+\end{equation}
+
+Let us next define a variable
+\begin{equation}
+\label{eq:D-substitution}
+D_t = \left[ R^{22}_t + B^{2\T}_t L^2_{t+1} B^2_t \right]^{-1} B^{2\T}_t L^2_{t+1}.
+\end{equation}
+
+Then, for the sake of easier substitution, we can rewrite (\ref{eq:u2-optimal}) as
+\begin{equation}
+\label{eq:u2-optimal-2}
+u^{2*}_t\left(u^{1}_t\right) = -D_t A_t x_t + \dd{u^2_t}{u^1_t} u^1_t
+\end{equation}
+and (\ref{eq:chain-rule-u2-u1}) as
+\begin{equation}
+\label{eq:du2-du1-optimal-2}
+\dd{u^2_t}{u^1_t} = -D_tB^1_t
+\end{equation}
+
+Recall Equation (\ref{eq:p1-hamilton-jacobi-eq-minimizer-1}). We underline the terms we will replace in the next step.
+\begin{equation}
+\label{eq:p1-hamilton-jacobi-eq-minimizer-1-rehash}
+0 = R^{11}_t u^{1*}_t + \underline{u^{2\T}_t(u^{1*}_t)} R^{12}_t \doubleunderline{\dd{u^{2}_t}{u^{1}_t}} + \left(B^1_t + B^2_t \doubleunderline{\dd{u^{2}_t}{u^{1}_t}} \right)^\T L^1_{t+1} \left( A_t x_t + B^1_t u^{1*}_t + B^2_t \underline{u^{2\T}_t(u^{1*}_t)} \right)
+\end{equation}
+
+We rewrite Equation \ref{eq:u2-optimal-2} using Equation \ref{eq:du2-du1-optimal-2} to get
+\begin{equation}
+\label{eq:simplified-u2}
+u^{2\T*}_t(u^{1*}_t) = -D_t [A_t x_t + B^1_t u^{1*}_t]
+\end{equation}
+
+We plug in Equation \ref{eq:simplified-u2} for $\underline{u^2_t(u^1_t)}$ and Equation \ref{eq:du2-du1-optimal-2} for $\doubleunderline{\dd{u^{2}_t}{u^{1}_t}}$ into Equation \ref{eq:p1-hamilton-jacobi-eq-minimizer-1-rehash}.
+\begin{equation}
+\begin{split}
+\label{eq:u1-equation-with-u2-and-du2du1}
+0 &= R^{11}_t u^{1*}_t + \left[ -D_t [A_t x_t + B^1_t u^{1*}_t] \right] R^{12}_t \left[ -D_tB^1_t \right] \\
+&+ \left(B^1_t + B^2_t \left[ -D_tB^1_t \right] \right)^\T L^1_{t+1} \left( A_t x_t + B^1_t u^{1*}_t + B^2_t \left[ -D_t [A_t x_t + B^1_t u^{1*}_t] \right] \right)
+\end{split}
+\end{equation}
+
+Finally, we solve for $u^{1*}_t$, which will give us $S^1_t$.
+\begin{equation}
+\label{eq:u1-optimal}
+\begin{split}
+u^{1*}_t = -S^1_t x_t
+    = -&\left[ R^{11}_t 
+             + B^{1\T}_t D_t^T R^{12}_t D_t B^1_t
+             + \left( B^1_t - B^2_t D_t B^1_t \right)^\T
+               L^1_{t+1}
+               \left( B^1_t - B^2_t D_t B^1_t \right)
+      \right]^{-1} \\
+    &\cdot  \left[ B^{1\T}_t D_t^T R^{12}_t D_t + \left( B^1_t - B^2_t D_t B^1_t \right)^\T
+               L^1_{t+1} \left(I - B^2_t D_t\right) \right] A_t x_t
+\end{split}
+\end{equation}
+
+% We can then plug in our substitution (\ref{eq:D-substitution}) to get the full expression for $S^1_t$:
+% \begin{equation}
+% \label{eq:S1t}
+% \begin{split}
+% S^1_t = &\left[ R^{11}_t 
+%              + B^{1\T}_t D_t^T R^{12}_t D_t B^1_t
+%              + \left( B^1_t - B^2_t D_t B^1_t \right)^\T
+%                L^1_{t+1}
+%                \left( B^1_t - B^2_t D_t B^1_t \right)
+%       \right]^{-1} \\
+%       &\cdot \left[ B^{1\T}_t D_t^T R^{12}_t D_t
+%              + \left( B^1_t - B^2_t D_t B^1_t \right)^\T
+%                L^1_{t+1} \left(I - B^2_t D_t\right) \right]
+%       A_t
+% \end{split}
+% \end{equation}
+
+We solve for $L^1_t$ in the same manner as $L^2_t$, and we find that the recurrence takes the same form.
+\begin{equation}
+L^1_t = Q^1_t + S^{1\T}_t R^{11}_t S^1_t + S^{2\T}_t R^{12}_t S^2_t + \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right)^\T L^1_{t+1} \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right)
+\end{equation}
+
+\subsection{Recursions}
+
+\begin{equation}
+D_t = \left[ R^{22}_t + B^{2\T}_t L^2_{t+1} B^2_t \right]^{-1} B^{2\T}_t L^2_{t+1}
+\end{equation}
+
+\begin{equation}
+\begin{split}
+S^1_t = &\left[ R^{11}_t 
+             + B^{1\T}_t D_t^T R^{12}_t D_t B^1_t
+             + \left( B^1_t - B^2_t D_t B^1_t \right)^\T
+               L^1_{t+1}
+               \left( B^1_t - B^2_t D_t B^1_t \right)
+      \right]^{-1} \\
+      &\cdot \left[ B^{1\T}_t D_t^T R^{12}_t D_t
+             + \left( B^1_t - B^2_t D_t B^1_t \right)^\T
+               L^1_{t+1} \left(I - B^2_t D_t\right) \right]
+      A_t
+\end{split}
+\end{equation}
+
+\begin{equation}
+S^2_t = \left[R^{22}_t + B^{2\T}_t L^2_{t+1} B^2_t\right]^{-1} B^{2\T}_t L^2_{t+1} \left( A_t - B^1_t S^1_t \right)
+\end{equation}
+
+\begin{equation}
+L^i_t = Q^i_t + S^{i\T}_t R^{ii}_t S^i_t + S^{j\T}_t R^{ij}_t S^j_t + \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right)^\T L^i_{t+1} \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right) ~~~~~~~ (i, j \in [1, 2], i \neq j)
+\end{equation}
+
+This concludes our derivation by construction.
+
+
+
+
+% Two players:
+% Dynamics $f(x_t, u^1_t, u^2_t(y^1_t)) = A_t x_t + B^1_t u^1_t + B^2_t u^2_t(u^1_t)$ for players 1 and 2. Costs $Q^{i}_t, R^{ii}_t, R^{ij}_t$ at each time step. We define value functions
+% \[ V^1_t(x_{t}) = x_t^\T Q^1 x_t + u^{1\T}_t R^{11}_t u^1_t + u^{2\T}_t(u^1_t) R^{12}_t u^2_t(u^1_t) + V^1_{t+1}(x_{t+1}) \]
+% \[ V^2_t(x_{t}) = x_t^\T Q^2_t x_t + u^{2\T}_t R^{22}_t u^2_t + u^{1\T}_t R^{21}_t u^1_t + V^2_{t+1}(x_{t+1}) ; \qquad u^1_t \text{ given.} \]
+
+% We assume controls of the form
+% \[ u^i_t = - S^i_t x_{t}, \]
+% where $S^i_t \geq 0, S^i_t = S^{i\T}_t$
+
+% We model, by construction, the value function in the form
+% \[ V^i_t(x_{t}) = \frac{1}{2} x^\T_t L^i_t x_t, \]
+% where $L^i_t \geq 0, = L^{i\T}_t$
+
+% We can now try to derive recurrences for $S^1_t, S^2_t, L^1_t, L^2_t$. Let's begin by expanding the value function using the known dynamics:
+% \begin{equation}
+% \label{eq:value_2}
+% V^2_t(x_{t}) = \frac{1}{2}\left[ x_t^\T Q^2_t x_t + u^{2\T}_t R^{22}_t u^2_t + u^{1\T}_t R^{21}_t u^1_t + \left(A_t x_t + B^1_t u^1_t + B^2_t u^2_t\right)^\T L^2_{t+1} \left( A_t x_t + B^1_t u^1_t + B^2_t u^2_t \right) \right]
+% \end{equation}
+
+% We can differentiate with respect to $u^2_t$ to find the minimum $u^{2*}_t$ of this convex function based on first order optimality conditions.
+% \[ 0 = \dd{V^2_t}{u^2_t} = \frac{1}{2} \left[ 0 + 2 R^{22}_t u^{2*}_t + B^{2\T}_t L^2_{t+1} \left( A_t x_t + B^1_t u^1_t + B^2_t u^{2*}_t \right) + \left(A_t x_t + B^1_t u^1_t + B^2_t u^{2*}_t\right)^\T L^2_{t+1} B^2_t \right] \]
+% By the symmetry of $L^2_{t+1}$, we can simplify to get
+% \[ 0 = R^{22}_t u^{2*}_t + B^{2\T}_t L^2_{t+1} \left( A_t x_t + B^1_t u^1_t + B^2_t u^{2*}_t \right) \]
+% So, the optimal input for P2 at time $t$, recall that $u^i_t = - S^i_t x_{t}$, is
+% \[ u^{2*}_t = -\left[R^{22}_t + B^{2\T}_t L^2_{t+1} B^2_t\right]^{-1} B^{2\T}_t L^2_{t+1} \left( A_t x_t + B^1_t u^1_t \right)
+%     = -\left[R^{22}_t + B^{2\T}_t L^2_{t+1} B^2_t\right]^{-1} B^{2\T}_t L^2_{t+1} \left( A_t - B^1_t S^1_t \right) x_t. \]
+% Thus,
+% \begin{equation}
+% S^2_t = \left[R^{22}_t + B^{2\T}_t L^2_{t+1} B^2_t\right]^{-1} B^{2\T}_t L^2_{t+1} \left( A_t - B^1_t S^1_t \right).
+% \end{equation}
+
+
+% Next, we identify an expression for $S^1_t$. We note here that $u^2_t(u^1_t)$ is a dependent variable, and we will need to take total derivatives. So let's first write out the value function
+% \begin{equation}
+% \label{eq:value_1}
+% V^1_t(x_{t}) = \frac{1}{2}\left[ x_t^\T Q^2_t x_t 
+%     + u^{1\T}_t R^{11}_t u^1_t
+%     + u^{2\T}_t(u^1_t) R^{12}_t u^2_t(u^1_t)
+%     + \left(A_t x_t + B^1_t u^1_t + B^2_t u^2_t(u^1_t)\right)^\T L^1_{t+1} \left( A_t x_t + B^1_t u^1_t + B^2_t u^2_t(u^1_t) \right) \right].
+% \end{equation}{1*}
+
+% We can now differentiate it and solve for the minimum cost control $u^{1*}_t$.
+% \[ 0 = \dd{V^{1}_t}{u^{1}_t} = \frac{1}{2} \left[ 0 
+%     + 2 R^{11}_t u^{1*}_t 
+%     + \left(\dd{u^{2}_t}{u^{1}_t}\right)^\T R^{12}_t u^2_t(u^{1*}_t) + u^{2\T}_t(u^{1*}_t) R^{12}_t \dd{u^{2}_t}{u^{1}_t}
+%     \right.
+%     \]
+% \[ + \left(B^1_t + B^2_t \dd{u^{2}_t}{u^{1}_t} \right)^\T L^1_{t+1} \left( A_t x_t + B^1_t u^{1*}_t + B^2_t u^2_t(u^{1*}_t) \right)
+%      \]
+% \[ \left. + \left( A_t x_t + B^1_t u^{1*}_t + B^2_t u^2_t(u^{1*}_t) \right)^\T L^1_{t+1} \left(B^1_t + B^2_t \dd{u^{2}_t}{u^{1}_t} \right)
+%     \right] \]
+% If we simplify further, we get
+% \[ = R^{11}_t u^{1*}_t + u^{2\T}_t(u^{1*}_t) R^{12}_t \dd{u^{2}_t}{u^{1}_t} + \left(B^1_t + B^2_t \dd{u^{2}_t}{u^{1}_t} \right)^\T L^1_{t+1} \left( A_t x_t + B^1_t u^{1*}_t + B^2_t u^2_t(u^1_t) \right) \]
+
+
+% % TODO: Figure out how to express S^1_t then express general L^i_t.
+% To identify $L^i_t$, we plug $u^{i*}_t = -S^i_t x_t$ into $V^2_t$ to identify $L^2_t$:
+% \begin{align*}
+% V^2_t(x_{t}) &= (\ref{eq:value_2}) \\
+%     &= \frac{1}{2}\left[ x_t^\T Q^2_t x_t + x_t^\T S_t^{2\T} R^{22}_t S^2_t x_t + x_t^\T S_t^{1\T} R^{21}_t S^1_t x_t + x_t^\T \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right)^\T L^2_{t+1} \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right) x_t \right] \\
+%     &= \frac{1}{2} x^\T_t \left[ Q^2_t + S_t^{2\T} R^{22}_t S^2_t + S^{1\T}_t R^{21}_t S^1_t + \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right)^\T L^2_{t+1} \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right) \right] x_t 
+% \end{align*}
+
+% Thus, we see that
+% \begin{equation}
+% \label{eq:}
+% L^i_t = Q^2_t + S_t^{2\T} R^{22}_t S^2_t + S^{1\T}_t R^{21}_t S^1_t + \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right)^\T L^2_{t+1} \left(A_t - B^1_t S^1_t - B^2_t S^2_t\right),
+% \end{equation}
+% where $L^i_{T+1} = Q^i_T$.
+
+
+\section{Extension to Nonlinear Systems}
+\todo{Describe the iterative solver here.}
+
+\newpage
+
+
+\end{document}
