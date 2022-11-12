@@ -104,7 +104,7 @@ seed!(0)
         follower_idx = 3 - stackelberg_leader_idx
         num_players = follower_idx
 
-        for tt in 1:horizon-1
+        for tt in horizon-1:-1:1
 
             # Copy the things we will alter.
             ũs = deepcopy(us)
@@ -125,13 +125,16 @@ seed!(0)
 
             # The cost computed manually for perturbed inputs using
             # x_t^T Q_t x_t^T + ... + <control costs> + ... + x_{t+1}^T * L^1_{t+1} x_{t+1}.
-            new_P1_cost = xs[:, tt]' * costs[leader_idx].Q * xs[:, tt]
-            new_P1_cost += ũ1ₜ' * costs[leader_idx].Rs[leader_idx] * ũ1ₜ
+            state_cost = xs[:, tt]' * costs[leader_idx].Q * xs[:, tt]
+            self_control_cost = ũ1ₜ' * costs[leader_idx].Rs[leader_idx] * ũ1ₜ
             if haskey(costs[leader_idx].Rs, follower_idx)
-                new_P1_cost += ũ2ₜ' * costs[leader_idx].Rs[follower_idx] * ũ2ₜ
+                cross_control_cost = ũ2ₜ' * costs[leader_idx].Rs[follower_idx] * ũ2ₜ
+            else
+                cross_control_cost = 0
             end
             x̃ₜ₊₁ = dyn.A * xs[:, tt] + dyn.Bs[leader_idx] * ũ1ₜ + dyn.Bs[follower_idx] * ũ2ₜ
-            new_P1_cost += x̃ₜ₊₁' * Ls[leader_idx][:, :, tt+1] * x̃ₜ₊₁
+            future_cost = x̃ₜ₊₁' * Ls[leader_idx][:, :, tt+1] * x̃ₜ₊₁
+            new_P1_cost = state_cost + self_control_cost + cross_control_cost + future_cost
 
             # The costs from time t+1 of the perturbed and optimal trajectories should also satisfy this condition.
             @test new_P1_cost ≥ opt_P1_cost
