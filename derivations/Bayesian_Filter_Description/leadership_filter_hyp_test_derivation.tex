@@ -1,0 +1,169 @@
+\documentclass[11pt]{article}
+\usepackage{subfigure,wrapfig,graphicx,booktabs,fancyhdr,amsmath,amsfonts}
+\usepackage{bm,amssymb,amsmath,amsthm,wasysym,xcolor,fullpage,setspace,multirow}
+\newcommand{\vb}{\boldsymbol}
+\newcommand{\vbh}[1]{\hat{\boldsymbol{#1}}}
+\newcommand{\vbb}[1]{\bar{\boldsymbol{#1}}}
+\newcommand{\vbt}[1]{\tilde{\boldsymbol{#1}}}
+\newcommand{\vbs}[1]{{\boldsymbol{#1}}^*}
+\newcommand{\vbd}[1]{\dot{{\boldsymbol{#1}}}}
+\newcommand{\vbdd}[1]{\ddot{{\boldsymbol{#1}}}}
+\newcommand{\by}{\times}
+\newcommand{\tr}{{\rm tr}}
+\newcommand{\cpe}[1]{\left[{#1} \times \right]}
+\newcommand{\sfrac}[2]{\textstyle \frac{#1}{#2}}
+\newcommand{\ba}{\begin{array}}
+\newcommand{\ea}{\end{array}}
+\renewcommand{\earth}{\oplus}
+\newcommand{\sinc}{{\rm \hspace{0.5mm} sinc}}
+\newcommand{\tf}{\tilde{f}}
+\newcommand{\tbox}[1]{\noindent \fbox{\parbox{\textwidth}{#1}}}
+\newcommand{\T}{\intercal}
+\DeclareMathAlphabet{\mathpzc}{OT1}{pzc}{m}{it}
+\renewcommand\d[1]{\partial{#1}}
+\newcommand\dd[2]{\frac{\partial#1}{\partial#2}}
+\newcommand\ddd[2]{\frac{\partial^2#1}{\partial#2^2}}
+
+
+\newcommand\truestate[1]{\bm{x}_{#1}}
+\newcommand\agent[1]{\mathcal{A}_{#1}}
+\newcommand\ctrlmdl[1]{\mathcal{C}_{#1}}
+\newcommand\stack[2]{\mathcal{S}^{#1}_{#2}}
+\newcommand\nash[1]{\mathcal{N}_{#1}}
+\newcommand\ctrl[2]{\bm{u}^{#1}_{#2}}
+\newcommand\costfn[1]{J^{#1}}
+\newcommand\hyp[1]{H_{#1}}
+\newcommand\obs[1]{\bm{z}_{#1}}
+
+\newcommand\prob[1]{\mathbb{P}{\{#1\}}}
+\newcommand\lkhd[1]{\ell{\{#1\}}}
+
+\newcommand\numstates{n}
+\newcommand\numctrls[1]{m^{#1}}
+\newcommand\horizon{T}
+
+\newcommand\stackmeas[2]{\bm{\hat{x}}^{#1}_{#2}}
+\newcommand\statecov[1]{\Sigma_{#1}}
+
+\newcommand\initcond[1]{\bm{c}^{0}_{#1}}
+
+\newcommand\reals{\mathbb{R}}
+
+
+\def\doubleunderline#1{\underline{\underline{#1}}}
+
+\newcommand\todo[1]{\textcolor{red}{TODO: #1}}
+\newcommand\comment[1]{\textcolor{purple}{#1}}
+
+\title{Leadership Filtering Hypothesis Test}
+\author{Hamzah Khan} \date{November 10, 2022}
+
+\begin{document}
+\maketitle
+
+In this document, we describe a Bayesian filter with dynamic (time-varying) state that we will use within the leadership filter. The Bayesian filter described herein is a core component of the leadership filter proposed by Khan and Fridovitch-Keil 2023 - it describes the process by which solutions to Stackelberg games are compared with the true evolution of the state and converted into probabilities of leadership for each actor in the scene. This process is summarized, in less detail than this document, by Section IV-D of Khan and Fridovitch-Keil 2023. 
+
+Leadership is not generally static in scenarios with two agents, so we need a dynamic state to track the state over time. We begin by describing a general Bayesian filter with dynamic state and then proceed to apply it as needed by the leadership filter.
+
+\section{Notation}
+We define variables below for a system with dynamics $f_t$ involving two agents $\agent{i}; i = \{1, 2\}$.
+\begin{align*}
+\truestate{t} - &\text{the true state of the system at time } t \\
+\obs{t} \sim \mathcal{N}(\truestate{t}, \statecov{t}) - &\text{a normally distributed observation of the true state of the system, with} \\
+    &\text{associated covariance} \\
+\costfn{i} - &\text{the cost function for $\agent{i}$} \\
+\horizon - &\text{a time horizon} \\
+\stack{i}{t}(f_t, \{ \costfn{i} \}_{i=1}^2; \initcond{t}) - &\text{a Stackelberg game played from time $t$ to $t + T$ with $\agent{i}$ as leader and with initial state } \initcond{t} \\
+\stackmeas{i}{t} - &\text{the solution trajectory, from $t$ to $t+T$ to the Stackelberg game } \stack{i}{t}(f_t, \{ \costfn{i} \}_{i=1}^2; \initcond{t}) \\
+\stackmeas{i}{t, k} - &\text{the $k$th state in the solution trajectory $\stackmeas{i}{t}$, i.e. at time $t + k$} \\
+H_t \in \{ 1, 2 \} - &\text{a binary random variable indicating which agent is the leader}
+\end{align*}
+
+\section{A General Bayesian Filter with Dynamic State}
+Consider a filter context $\{ X_t \}$. This is the dynamic state of the Bayesian filter, but will be referred to as a filter context to avoid confusion with the state of the system. Let $\{ Y_t \}$ be observations of the game state. We make two assumptions:
+\begin{enumerate}
+\item the probability of the initial filter context is independent of the initial measurement,
+\begin{equation}
+\label{eq:indep-init-context}
+\prob{X_0 | Y_0} = \prob{X_0}
+\end{equation}
+
+\item conditional independence of measurements $\{\obs{t}\}_{t=1}^\horizon$ with respect to filter contexts at the same time $t$.
+\begin{equation}
+\label{eq:cond-indep-of-meas-wrt-state}
+\lkhd{Y_{1:t} | X_{1:t}} = \prod_{i=1}^t \ell(Y_i | X_i)
+\end{equation}
+\end{enumerate}
+
+The Bayesian filter has both a time update
+\begin{equation}
+\label{eq:time-update}
+\prob{X_t | Y_{1:t-1}} = \int \prob{X_t | X_{t-1}} \prob{X_{t-1} | Y_{1:t-1}} dX_{t-1}
+\end{equation}
+and a subsequent measurement update
+\begin{equation}
+\label{eq:meas-update}
+\prob{X_t | Y_{1:t}} = \frac{\lkhd{Y_t | X_t} \prob{X_t | Y_{1:t-1}}}{\int \lkhd{Y_t | X_t} \prob{X_t | Y_{1:t-1}}  dX_t}.
+\end{equation}
+
+The meaning of each of these terms can be interpreted in the following ways.
+\begin{align*}
+\prob{X_t | Y_{1:t-1}} - &\text{predictive distribution} \\
+\prob{X_{t-1} | Y_{1:t-1}} - &\text{old posterior} \\
+\prob{X_t | Y_{1:t}} - &\text{new posterior} \\
+\lkhd{Y_t | X_t} - &\text{likelihood function, i.e. sensor model} \\
+\prob{X_t | X_{t-1}} - &\text{transition probability} \\
+\prob{X_0} - &\text{initial filter context probability}
+\end{align*}
+
+\section{Leadership Filtering}
+In this section, we apply the Bayesian filter introduced in the previous section to the leadership filtering problem. Let the filter context $X_t = (H_t, \initcond{t})$, where $H_t$ describes which agent is the leader between them at time $t$ and $\initcond{t}$ is an initial state at time $t$. 
+
+% {\comment{Should $\initcond{t} = \stackmeas{i}{t-1, 2}$ or $\initcond{t} = z_{t-1}$? The first makes more sense given the math, but I also wonder if the second makes more sense as the initial argument for the Stackelberg game.}}
+
+
+We make assumptions that the initial position is known perfectly ($\prob{\initcond{0}} = 1$) and that $H_t$ is independent of $\initcond{t}$ ($\prob{H_t, \initcond{t}} = \prob{H_t}\prob{\initcond{t}}$). Otherwise, the initial assumptions \ref{eq:indep-init-context} and \ref{eq:cond-indep-of-meas-wrt-state} hold:
+\begin{equation}
+\prob{H_0, \initcond{0} | z_0} = \prob{H_0}\prob{\initcond{0}} = \prob{H_0}
+\end{equation}
+Measurements are conditionally independent of one another with respect to filter contexts at the same time $t$.
+\begin{equation}
+\lkhd{\obs{1:t} | H_{1:t}, \initcond{1:t}} = \prod_{i=1}^t \ell(z_i | H_i, \initcond{i})
+\end{equation}
+
+
+We substitute our values for the time update into \ref{eq:time-update},
+\begin{equation}
+\prob{H_t, \initcond{t} | \obs{1:t-1}} = \int \prob{H_t, \initcond{t} | H_{t-1}, \initcond{t-1}} \prob{H_{t-1}, \initcond{t-1} | \obs{1:t-1}} d(H_{t-1}, \initcond{{}t-1}),
+\end{equation}
+and for the measurement update into \ref{eq:meas-update},
+\begin{equation}
+\prob{H_t, \initcond{t} | \obs{1:t}} = \frac{\lkhd{\obs{t} | H_t, \initcond{t}} \prob{H_t, \initcond{t} | \obs{1:t-1}}}{\int \lkhd{\obs{t} | H_t, \initcond{t}} \prob{H_t, \initcond{t} | \obs{1:t-1}}  d(H_t, \initcond{t})}.
+\end{equation}
+
+
+Two of these terms are described with respect to the leadership filtering problem. We note that a Stackelberg game can be described using $H_t$ and $\initcond{t}$. Thus, the likelihood equation can be written
+\begin{equation}
+\ell(\obs{t} | H_t, \initcond{t}) \equiv \prob{\obs{t} | \left[ \stack{H_{t}}{t-1}\left(f_t, \costfn{1}, \costfn{2}; \initcond{t} \right) \right]_{t-1, 1}} = \prob{\obs{t} | \stackmeas{H_t}{t-1, 1}}.
+\end{equation}
+
+We define a transition probability using a Markov Chain with probability $p$ of transitioning between states of $H_t$.
+\todo{Add image here of two-state Markov Chain with probability $p$ of transitioning.}
+
+
+\subsection{How do we select the initial condition $\initcond{t}$?}
+The mathematically correct value for $\initcond{t}$ is the true state at time $t$, $\truestate{t}$. However, we will not have the true state at time $t$. Therefore, we select the initial condition to be the second element in a Stackelberg game played at time $t-1$. This corresponds to a state at time $t$, which we use as our initial condition:
+\begin{equation}
+\initcond{t} = \stackmeas{H_t}{t-1, 1}.
+\end{equation}
+
+There will likely be some error associated with this choice.
+
+We could consider using the measurement $\obs{t}$ as our initial condition. However, this does not take into consideration Stackelberg leadership, which we believe provides a source of information by which to approximate leadership.
+
+\subsection{How can the use of this Bayesian filter be validated?}
+In this description, we use a dynamic state because leadership can evolve over time in most two-agent scenarios. However, consider a scenario where we know one of the two agents is the leader for the entire scenario, though not which one. In such a scenario, we may use a Bayesian filter with static state to see how well the leadership filter performs under Monte Carlo analysis. If it performs well in predicting that the correct agent is the leader, then we can make the claim that a Bayesian filter with dynamic state should work well when the leading agent changes over time.
+
+This concludes our description of the hypothesis test used in the leadership filter.
+
+\end{document}
