@@ -1,0 +1,101 @@
+\documentclass[11pt]{article}
+\usepackage{subfigure,wrapfig,graphicx,booktabs,fancyhdr,amsmath,amsfonts}
+\usepackage{bm,amssymb,amsmath,amsthm,wasysym,xcolor,fullpage,setspace,multirow}
+\newcommand{\vb}{\boldsymbol}
+\newcommand{\vbh}[1]{\hat{\boldsymbol{#1}}}
+\newcommand{\vbb}[1]{\bar{\boldsymbol{#1}}}
+\newcommand{\vbt}[1]{\tilde{\boldsymbol{#1}}}
+\newcommand{\vbs}[1]{{\boldsymbol{#1}}^*}
+\newcommand{\vbd}[1]{\dot{{\boldsymbol{#1}}}}
+\newcommand{\vbdd}[1]{\ddot{{\boldsymbol{#1}}}}
+\newcommand{\by}{\times}
+\newcommand{\tr}{{\rm tr}}
+\newcommand{\cpe}[1]{\left[{#1} \times \right]}
+\newcommand{\sfrac}[2]{\textstyle \frac{#1}{#2}}
+\newcommand{\ba}{\begin{array}}
+\newcommand{\ea}{\end{array}}
+\renewcommand{\earth}{\oplus}
+\newcommand{\sinc}{{\rm \hspace{0.5mm} sinc}}
+\newcommand{\tf}{\tilde{f}}
+\newcommand{\tbox}[1]{\noindent \fbox{\parbox{\textwidth}{#1}}}
+\newcommand{\T}{\intercal}
+\DeclareMathAlphabet{\mathpzc}{OT1}{pzc}{m}{it}
+\renewcommand\d[1]{\partial{#1}}
+\newcommand\dd[2]{\frac{\partial#1}{\partial#2}}
+\newcommand\ddd[2]{\frac{\partial^2#1}{\partial#2^2}}
+
+
+\newcommand\truestate[1]{\bm{x}_{#1}}
+\newcommand\agent[1]{\mathcal{A}_{#1}}
+\newcommand\ctrlmdl[1]{\mathcal{C}_{#1}}
+\newcommand\stack[2]{\mathcal{S}^{#1}_{#2}}
+\newcommand\nash[1]{\mathcal{N}_{#1}}
+\newcommand\ctrl[2]{\bm{u}^{#1}_{#2}}
+\newcommand\costfn[1]{J^{#1}}
+\newcommand\hyp[1]{H_{#1}}
+\newcommand\obs[1]{\bm{z}_{#1}}
+
+\newcommand\prob[1]{\mathbb{P}{\{#1\}}}
+\newcommand\lkhd[1]{\ell{\{#1\}}}
+
+\newcommand\numstates{n}
+\newcommand\numctrls[1]{m^{#1}}
+\newcommand\horizon{T}
+
+\newcommand\stackmeas[2]{\bm{\hat{x}}^{#1}_{#2}}
+\newcommand\statecov[1]{\Sigma_{#1}}
+
+\newcommand\initcond[1]{\bm{c}^{0}_{#1}}
+
+\newcommand\reals{\mathbb{R}}
+
+\newcommand\ctrlhat[2]{\bm{\hat{u}}^{#1}_{#2}}
+
+
+\def\doubleunderline#1{\underline{\underline{#1}}}
+
+\newcommand\todo[1]{\textcolor{red}{TODO: #1}}
+\newcommand\comment[1]{\textcolor{purple}{#1}}
+
+\title{Stackelberg ILQGames Writeup}
+\author{Hamzah Khan} \date{November 13, 2022}
+
+\begin{document}
+\maketitle
+
+In this document, we describe the alterations made to the ILQGames algorithm described in \emph{Efficient Iterative Linear-Quadratic Approximations for Nonlinear Multi-Player General-Sum Differential Games} (Fridovich-Keil et al. 2020) made to adapt it to solve nonlinear, non-quadaratic 2-player Stackelberg games.
+
+We assume no affine terms in this initial draft. \todo{adjust to include affine terms.}
+
+\section{Steps}
+The algorithm accepts a number of inputs:
+\begin{itemize}
+\item initial state $\truestate{0}$,
+\item a horizon $\horizon$ over which the game is played,
+\item cost functions $g^i_t$, $i \in \{1, 2\}$ at each time step $t$,
+\item initial control strategies $\gamma^i_{k=0}$ described by the gain matrix $S^i_{t, k=0}$ and the recursive cost matrix $L^i_{t, k=0}$, $i \in \{1, 2\}$.
+\end{itemize}
+
+We pre-select arbitrary reference state and controls to be
+\[ \truestate{t} = 0, ~ \ctrl{i}{t} = 0 ~~~ \forall i \in \{ 1, 2 \} \]
+and $\eta \in (0, 1]$.
+
+At each iteration $k = 1, 2, \ldots$ until convergence condition $\| \Delta \gamma^i_{k} \| < $ threshold $\epsilon$,
+\begin{enumerate}
+\item Propagate $\gamma^i_{k-1}$ forward in time from $\truestate{0}$ to get $\xi_k \equiv \{ \stackmeas{}{1:\horizon}, \ctrlhat{i}{1:\horizon} \}$.
+
+\item Compute errors
+\[ \delta \truestate{t} = \truestate{t} - \stackmeas{}{1:\horizon}, ~~~ \delta \ctrl{i}{t} = \ctrl{i}{t} -  \ctrlhat{i}{1:\horizon}. \]
+
+\item Linearize the dynamics and quadraticize about the error state and controls.
+
+\[ A_t = \dd{f_t(\stackmeas{}{t}, \ctrlhat{i}{t})}{\stackmeas{}{t}}, ~~~ B^i_t = \dd{f_t(\stackmeas{}{t}, \ctrlhat{i}{t})}{\ctrlhat{i}{t}} \]
+\[ Q^i_t = \nabla_{\stackmeas{}{}\stackmeas{}{}} g^i_t, ~~~ R^{ij}_t = \nabla_{\stackmeas{}{}\ctrlhat{}{}} g^i_t \]
+
+\item Solve LQ Stackelberg game $\gamma^i_{k} = \stack{1}{t}(A_t, B_t, \{ Q^i_t \}, \{ R^{ij}_t \}, \horizon; \truestate{0}) = \left\{ S^i_{t, k}, L^i_{t, k} \right\}$.
+
+\item Adjust the control strategies based on this approximate solution:
+\[ \gamma^i_k = \ctrlhat{i}{t} - S^i_{t, k} \delta\truestate{t}.  \]
+\end{enumerate}
+
+\end{document}
