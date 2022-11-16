@@ -90,7 +90,7 @@ At each iteration $k = 1, 2, \ldots$ until convergence condition $\| \Delta \gam
 \item Linearize the dynamics and quadraticize about the error state and controls.
 
 \[ A_t = \dd{f_t(\stackmeas{}{t}, \ctrlhat{i}{t})}{\stackmeas{}{t}}, ~~~ B^i_t = \dd{f_t(\stackmeas{}{t}, \ctrlhat{i}{t})}{\ctrlhat{i}{t}} \]
-\[ Q^i_t = \nabla_{\stackmeas{}{}\stackmeas{}{}} g^i_t, ~~~ R^{ij}_t = \nabla_{\stackmeas{}{}\ctrlhat{}{}} g^i_t \]
+\[ Q^i_t = \nabla_{\stackmeas{}{}\stackmeas{}{}} g^i_t, ~~~ R^{ii}_t = \nabla_{\ctrlhat{i}{}\ctrlhat{i}{}} g^i_t \]
 
 \item Solve LQ Stackelberg game $\gamma^i_{k} = \stack{1}{t}(A_t, B_t, \{ Q^i_t \}, \{ R^{ij}_t \}, \horizon; \truestate{0}) = \left\{ S^i_{t, k}, L^i_{t, k} \right\}$.
 
