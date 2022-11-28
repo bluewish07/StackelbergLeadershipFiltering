@@ -27,7 +27,7 @@ end
 # Returns feedback matrices P[player][:, :, time]
 export solve_lq_stackelberg_feedback
 function solve_lq_stackelberg_feedback(
-    dyn::Dynamics, costs::AbstractArray{Cost}, horizon::Int, leader_idx::Int)
+    dyn::LinearDynamics, costs::AbstractArray{QuadraticCost}, horizon::Int, leader_idx::Int)
 
     # TODO: Add checks for correct input lengths - they should match the horizon.
     num_players = size(costs)[1]

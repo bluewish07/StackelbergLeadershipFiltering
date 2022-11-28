@@ -1,5 +1,6 @@
 # A helper function to compute P for all players at time t.
-function compute_P_at_t(dyn_at_t::Dynamics, costs_at_t, Zₜ₊₁)
+# TODO: Add the QuadraticCost modifier to this costs_at_t argument.
+function compute_P_at_t(dyn_at_t::LinearDynamics, costs_at_t, Zₜ₊₁)
 
     num_players = size(costs_at_t)[1]
     num_states = xdim(dyn_at_t)
@@ -35,7 +36,7 @@ end
 # Returns feedback matrices P[player][:, :, time]
 export solve_lq_nash_feedback
 function solve_lq_nash_feedback(
-    dyn::Dynamics, costs::AbstractArray{Cost}, horizon::Int)
+    dyn::LinearDynamics, costs::AbstractArray{QuadraticCost}, horizon::Int)
 
     num_players = size(costs)[1]
 
