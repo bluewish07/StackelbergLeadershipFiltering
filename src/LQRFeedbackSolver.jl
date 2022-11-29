@@ -5,17 +5,15 @@ using LinearAlgebra
 
 # Shorthand function for LTI dynamics and costs.
 export solve_lqr_feedback
-function solve_lqr_feedback(
-    dyn::Dynamics, costs::Cost, horizon::Int)
+function solve_lqr_feedback(dyn::LinearDynamics, costs::QuadraticCost, horizon::Int)
     dyns = [dyn for _ in 1:horizon]
     costs = [costs for _ in 1:horizon]
     return solve_lqr_feedback(dyns, costs, horizon)
 end
 
 # TODO(hamzah): Add interfaces for cases in which one of the arguments is passed in as a list, but the other is not.
-
 export solve_lqr_feedback
-function solve_lqr_feedback(dyns::AbstractArray{Dynamics}, costs::AbstractArray{Cost}, horizon::Int)
+function solve_lqr_feedback(dyns::AbstractArray{LinearDynamics}, costs::AbstractArray{QuadraticCost}, horizon::Int)
 
     # Ensure the number of dynamics and costs are the same as the horizon.
     @assert(ndims(dyns) == 1 && size(dyns, 1) == horizon)
