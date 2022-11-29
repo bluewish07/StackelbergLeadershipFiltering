@@ -63,9 +63,11 @@
 \begin{document}
 \maketitle
 
-In this document, we describe the alterations made to the ILQGames algorithm described in \emph{Efficient Iterative Linear-Quadratic Approximations for Nonlinear Multi-Player General-Sum Differential Games} (Fridovich-Keil et al. 2020) made to adapt it to solve nonlinear, non-quadaratic 2-player Stackelberg games.
+In \emph{Efficient Iterative Linear-Quadratic Approximations for Nonlinear Multi-Player General-Sum Differential Games}, Fridovich-Keil et al. 2020 introduce the ILQGames algorithm. ILQGames iteratively solves $N$-player games which do not satisfy linear-quadratic (LQ) assumptions on game dynamics and player costs.
 
-We assume no affine terms in this initial draft. \todo{adjust to include affine terms.}
+In this document, we describe a similar algorithm, called 2-Player Stackelberg ILQGames, which adapts the original ILQGames algorithm to iteratively solve non-linear, non-quadratic 2-player Stackelberg games.
+
+We assume no affine terms in this initial draft. \todo{adjust derivation to include affine terms.}
 
 \section{Steps}
 The algorithm accepts a number of inputs:
@@ -73,7 +75,7 @@ The algorithm accepts a number of inputs:
 \item initial state $\truestate{0}$,
 \item a horizon $\horizon$ over which the game is played,
 \item cost functions $g^i_t$, $i \in \{1, 2\}$ at each time step $t$,
-\item initial control strategies $\gamma^i_{k=0}$ described by the gain matrix $S^i_{t, k=0}$ and the recursive cost matrix $L^i_{t, k=0}$, $i \in \{1, 2\}$.
+\item initial control strategies $\gamma^i_{k=0}$ described by the control gain matrix $S^i_{t, k=0}$ and the recursive cost matrix $L^i_{t, k=0}$, $i \in \{1, 2\}$.
 \end{itemize}
 
 We pre-select arbitrary reference state and controls to be
@@ -82,7 +84,7 @@ and $\eta \in (0, 1]$.
 
 At each iteration $k = 1, 2, \ldots$ until convergence condition $\| \Delta \gamma^i_{k} \| < $ threshold $\epsilon$,
 \begin{enumerate}
-\item Propagate $\gamma^i_{k-1}$ forward in time from $\truestate{0}$ to get $\xi_k \equiv \{ \stackmeas{}{1:\horizon}, \ctrlhat{i}{1:\horizon} \}$.
+\item Propagate $\gamma^i_{k-1}$ forward in time using the gain matrices $S^i_{1:T, k=i}$ from $\truestate{0}$ to get $\xi_k \equiv \{ \stackmeas{}{1:\horizon}, \ctrlhat{i}{1:\horizon} \}$.
 
 \item Compute errors
 \[ \delta \truestate{t} = \truestate{t} - \stackmeas{}{1:\horizon}, ~~~ \delta \ctrl{i}{t} = \ctrl{i}{t} -  \ctrlhat{i}{1:\horizon}. \]
@@ -92,10 +94,10 @@ At each iteration $k = 1, 2, \ldots$ until convergence condition $\| \Delta \gam
 \[ A_t = \dd{f_t(\stackmeas{}{t}, \ctrlhat{i}{t})}{\stackmeas{}{t}}, ~~~ B^i_t = \dd{f_t(\stackmeas{}{t}, \ctrlhat{i}{t})}{\ctrlhat{i}{t}} \]
 \[ Q^i_t = \nabla_{\stackmeas{}{}\stackmeas{}{}} g^i_t, ~~~ R^{ij}_t = \nabla_{\ctrlhat{j}{}\ctrlhat{j}{}} g^i_t \]
 
-\item Solve LQ Stackelberg game $\gamma^i_{k} = \stack{1}{t}(A_t, B_t, \{ Q^i_t \}, \{ R^{ij}_t \}, \horizon; \truestate{0}) = \left\{ S^i_{t, k}, L^i_{t, k} \right\}$.
+\item Solve LQ Stackelberg game $\gamma^i_{k} = \stack{1}{t}(A_t, B_t, \{ Q^i_t \}, \{ R^{ij}_t \}, \horizon; \truestate{0}) = \left\{ S^i_{1:T, k}, L^i_{1:T, k} \right\}$.
 
 \item Adjust the control strategies based on this approximate solution:
-\[ \gamma^i_k = \ctrlhat{i}{t} - S^i_{t, k} \delta\truestate{t}.  \]
+\[ \gamma^i_k = \ctrlhat{i}{1:T} - S^i_{1:T, k} \delta\truestate{t}.  \]
 \end{enumerate}
 
 \end{document}
