@@ -48,6 +48,7 @@ end
 # TODO: Make the affine cost structure with homogenenized coordinates.
 # struct AffineCost <: Cost end
 # function quadraticize_costs(cost::AffineCost, t, x, us)
+# function evaluate(c::AffineCost, xs, us)
 # end
 
 # Export all the cost types/structs.

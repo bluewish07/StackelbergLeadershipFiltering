@@ -66,7 +66,7 @@ function unroll_feedback(dyn::Dynamics, Ps, x₁)
     @assert length(x₁) == xdim(dyn)
 
     N = length(Ps)
-    @assert N == length(dyn.Bs)
+    @assert N == dyn.sys_info.num_agents
 
     horizon = last(size(first(Ps)))
 
@@ -97,7 +97,7 @@ function unroll_raw_controls(dyn::Dynamics, us, x₁)
     @assert length(x₁) == xdim(dyn)
 
     N = length(us)
-    @assert N == length(dyn.Bs)
+    @assert N == dyn.sys_info.num_agents
 
     horizon = last(size(first(us)))
 
