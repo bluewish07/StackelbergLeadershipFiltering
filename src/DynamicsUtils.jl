@@ -106,6 +106,10 @@ export propagate_dynamics, linearize_dynamics
 
 
 # Dimensionality helpers.
+function num_agents(dyn::Dynamics)
+    return num_agents(dyn.sys_info)
+end
+
 function xdim(dyn::Dynamics)
     return dyn.sys_info.num_x
 end
@@ -118,7 +122,7 @@ function udim(dyn::Dynamics, player_idx)
     return dyn.sys_info.num_us[player_idx]
 end
 
-export xdim, udim
+export num_agents, xdim, udim
 
 
 # TODO(hamzah) Add better tests for the unroll_feedback, unroll_raw_controls functions.

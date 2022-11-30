@@ -7,4 +7,8 @@ struct SystemInfo
 end
 SystemInfo(num_agents, num_x, num_us) = SystemInfo(num_agents, num_x, num_us, 0)
 
-export SystemInfo
+function num_agents(sys_info::SystemInfo)
+    return sys_info.num_agents
+end
+
+export SystemInfo, num_agents
