@@ -23,8 +23,8 @@ end
 function solve_lqr_feedback(dyns::AbstractVector{LinearDynamics}, costs::AbstractVector{QuadraticCost}, horizon::Int)
 
     # Ensure the number of dynamics and costs are the same as the horizon.
-    @assert(ndims(dyns) == 1 && size(dyns, 1) == horizon)
-    @assert(ndims(costs) == 1 && size(costs, 1) == horizon)
+    @assert !isempty(dyns) && size(dyns, 1) == horizon
+    @assert !isempty(costs) && size(costs, 1) == horizon
 
     # Note: There should only be one "player" for an LQR problem.
     num_states = xdim(dyns[1])
