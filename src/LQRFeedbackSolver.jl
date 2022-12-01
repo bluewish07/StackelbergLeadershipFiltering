@@ -31,7 +31,9 @@ function solve_lqr_feedback(dyns::AbstractVector{LinearDynamics}, costs::Abstrac
     num_ctrls = udim(dyns[1], 1)
 
     Ps = zeros((num_ctrls, num_states, horizon))
+    Zs = zeros((num_states, num_states, horizon))
     Zₜ₊₁ = costs[horizon].Q
+    Zs[:, :, horizon] = Zₜ₊₁
 
     # base case
     if horizon == 1
@@ -54,9 +56,10 @@ function solve_lqr_feedback(dyns::AbstractVector{LinearDynamics}, costs::Abstrac
         
         # Update Zₜ₊₁ at t+1 to be the one at t as we go to t-1.
         Zₜ₊₁ = Q + A' * Zₜ₊₁ * A - A' * Zₜ₊₁ * B * Ps[:, :, tt]
+        Zs[:, :, tt] = Zₜ₊₁
     end
 
-    return Ps
+    return Ps, Zs
 end
 
 
@@ -77,10 +80,9 @@ function solve_approximated_lqr_feedback(dyn::Dynamics,
     quad_costs = Array{QuadraticCost}(undef, T)
 
     for tt in 1:T
-        # u_refs_at_tt = [u_refs[ii][tt, :] for ii in 1:N]
         current_time = t0 + tt
-        lin_dyns[tt] = linearize_dynamics(dyn, current_time, x_refs[tt, :], [u_refs[tt, :]])
-        quad_costs[tt] = quadraticize_costs(cost, current_time, x_refs[tt, :], [u_refs[tt, :]])
+        lin_dyns[tt] = linearize_dynamics(dyn, current_time, x_refs[:, tt], [u_refs[:, tt]])
+        quad_costs[tt] = quadraticize_costs(cost, current_time, x_refs[:, tt], [u_refs[:, tt]])
     end
 
     return solve_lqr_feedback(lin_dyns, quad_costs, T)
