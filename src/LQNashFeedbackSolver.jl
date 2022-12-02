@@ -138,7 +138,7 @@ function solve_approximated_lq_nash_feedback(dyn::Dynamics,
     T = horizon
     N = num_agents(dyn)
 
-    lin_dyns = Array{LinearDynamics}(undef, T)
+    lin_dyns = Vector{LinearDynamics}(undef, T)
     all_quad_costs = Vector{Vector{QuadraticCost}}(undef, T)
 
     for tt in 1:T
