@@ -1,4 +1,6 @@
 # Utilities
+# TODO(hmzh) Add a game class of some sort that ties together the system info, cost, and dynamics, factoring in possible
+#            homogenization.
 struct SystemInfo
     num_agents::Int
     num_x::Int
