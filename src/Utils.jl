@@ -25,4 +25,8 @@ function udim(sys_info::SystemInfo, player_idx)
     return sys_info.num_us[player_idx]
 end
 
-export SystemInfo, num_agents, xdim, udim
+function vdim(sys_info::SystemInfo)
+    return sys_info.num_v
+end
+
+export SystemInfo, num_agents, xdim, udim, vdim

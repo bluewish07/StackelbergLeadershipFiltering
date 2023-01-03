@@ -2,7 +2,8 @@
 
 # Every Dynamics is assumed to have the following functions defined on it:
 # - linearize_dynamics(dyn, x, us) - this function linearizes the dynamics given the state and controls.
-# - propagate_dynamics(cost, t, x, us) - this function propagates the dynamics to the next timestep.
+# - propagate_dynamics(dyn, t, x, us) - this function propagates the dynamics to the next timestep with state and controls.
+# - propagate_dynamics(dyn, t, x, us, v) - this function propagates the dynamics to the next timestep with state, controls, realized process noise.
 # Every Dynamics struct must have a sys_info field of type SystemInfo.
 abstract type Dynamics end
 
@@ -29,6 +30,10 @@ end
 
 function udim(dyn::Dynamics, player_idx)
     return udim(dyn.sys_info, player_idx)
+end
+
+function vdim(dyn::Dynamics)
+    return vdim(dyn.sys_info)
 end
 
 export num_agents, xdim, udim
