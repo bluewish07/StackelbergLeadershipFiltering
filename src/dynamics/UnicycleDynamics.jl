@@ -9,7 +9,10 @@ struct UnicycleDynamics <: NonlinearDynamics
     sys_info::SystemInfo
 end
 
-function propagate_dynamics(dyn::UnicycleDynamics, t, x, us)
+function propagate_dynamics(dyn::UnicycleDynamics,
+                            t,
+                            x::AbstractVector{Float64},
+                            us::AbstractVector{<:AbstractVector{Float64}})
     N = dyn.sys_info.num_agents
     @assert N == length(us)
     @assert xdim(dyn) == 4 * N
@@ -22,18 +25,27 @@ function propagate_dynamics(dyn::UnicycleDynamics, t, x, us)
         px = x[start_idx + 1]
         py = x[start_idx + 2]
         theta = x[start_idx + 3]
-        v = x[start_idx + 4]
+        vel = x[start_idx + 4]
 
         turn_rate = us[ii][1]
         accel = us[ii][2]
 
-        x_dot[start_idx+1:start_idx+4] = [v * cos(theta); v * sin(theta); turn_rate; accel]
+        x_dot[start_idx+1:start_idx+4] = [vel * cos(theta); vel * sin(theta); turn_rate; accel]
     end
 
     return x_dot
 end
 
-function linearize_dynamics(dyn::UnicycleDynamics, t, x, us)
+# TODO: Unicycle dynamics doesn't currently support process noise.
+function propagate_dynamics(dyn::UnicycleDynamics,
+                            t,
+                            x::AbstractVector{Float64},
+                            us::AbstractVector{<:AbstractVector{Float64}},
+                            v::AbstractVector{Float64})
+    throw(MethodError("propagate_dynamics not implemented with process noise for UnicycleDynamics"))
+end
+
+function linearize_dynamics(dyn::UnicycleDynamics, t, x::AbstractVector{Float64}, us::AbstractVector{<:AbstractVector{Float64}})
     N = dyn.sys_info.num_agents
     @assert N == length(us)
     @assert xdim(dyn) == 4 * N
