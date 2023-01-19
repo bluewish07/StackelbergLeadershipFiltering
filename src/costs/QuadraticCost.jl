@@ -16,7 +16,7 @@ function add_control_cost!(c::QuadraticCost, other_player_idx, Rij)
     c.Rs[other_player_idx] = Rij
 end
 
-function quadraticize_costs(cost::QuadraticCost, t, x, us)
+function quadraticize_costs(cost::QuadraticCost, time_range, x, us)
     return cost
 end
 

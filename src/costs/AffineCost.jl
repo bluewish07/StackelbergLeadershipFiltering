@@ -24,7 +24,7 @@ function add_control_cost!(c::AffineCost, other_player_idx, Rij, rj, crj)
     c.crs[other_player_idx] = crj
 end
 
-function quadraticize_costs(cost::AffineCost, t, x, us)
+function quadraticize_costs(cost::AffineCost, time_range, x, us)
     num_players = size(us, 1)
     Q = homogenize_cost(cost.Q, cost.q, cost.cq)
     cost = QuadraticCost(Q)

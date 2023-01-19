@@ -31,7 +31,8 @@ function unroll_feedback(dyn::Dynamics, control_strategy::MultiplayerControlStra
         end
 
         us_prev = [us[i][:, tt-1] for i in 1:N]
-        xs[:, tt] = propagate_dynamics(dyn, tt, xs[:, tt-1], us_prev)
+        time_range = (tt-1, tt)
+        xs[:, tt] = propagate_dynamics(dyn, time_range, xs[:, tt-1], us_prev)
     end
 
     # Controls at final time.
@@ -59,7 +60,8 @@ function unroll_raw_controls(dyn::Dynamics, us, x₁)
     us = [zeros(udim(dyn, ii), horizon) for ii in 1:N]
     for tt in 2:horizon
         us_prev = [us[i][:, tt-1] for i in 1:N]
-        xs[:, tt] = propagate_dynamics(dyn, tt, xs[:, tt-1], us_prev)
+        time_range = (tt-1, tt)
+        xs[:, tt] = propagate_dynamics(dyn, time_range, xs[:, tt-1], us_prev)
     end
 
     return xs
