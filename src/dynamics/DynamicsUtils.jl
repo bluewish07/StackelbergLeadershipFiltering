@@ -2,8 +2,8 @@
 
 # Every Dynamics is assumed to have the following functions defined on it:
 # - linearize_dynamics(dyn, x, us) - this function linearizes the dynamics given the state and controls.
-# - propagate_dynamics(dyn, t, x, us) - this function propagates the dynamics to the next timestep with state and controls.
-# - propagate_dynamics(dyn, t, x, us, v) - this function propagates the dynamics to the next timestep with state, controls, realized process noise.
+# - propagate_dynamics(dyn, time_range, x, us) - this function propagates the dynamics to the next timestep with state and controls.
+# - propagate_dynamics(dyn, time_range, x, us, v) - this function propagates the dynamics to the next timestep with state, controls, realized process noise.
 # Every Dynamics struct must have a sys_info field of type SystemInfo.
 abstract type Dynamics end
 
@@ -11,8 +11,13 @@ abstract type Dynamics end
 # functions as the Dynamics type.
 abstract type NonlinearDynamics <: Dynamics end
 
+# By default, generate no process noise. Allow 
+function generate_process_noise(dyn::Dynamics, rng)
+    return zeros(vdim(dyn))
+end
+
 # Export the types of dynamics.
-export Dynamics, NonlinearDynamics
+export Dynamics, NonlinearDynamics, generate_process_noise
 
 
 # Dimensionality helpers.

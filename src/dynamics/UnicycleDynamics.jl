@@ -10,7 +10,7 @@ struct UnicycleDynamics <: NonlinearDynamics
 end
 
 function propagate_dynamics(dyn::UnicycleDynamics,
-                            t,
+                            time_range,
                             x::AbstractVector{Float64},
                             us::AbstractVector{<:AbstractVector{Float64}})
     N = dyn.sys_info.num_agents
@@ -38,14 +38,14 @@ end
 
 # TODO: Unicycle dynamics doesn't currently support process noise.
 function propagate_dynamics(dyn::UnicycleDynamics,
-                            t,
+                            time_range,
                             x::AbstractVector{Float64},
                             us::AbstractVector{<:AbstractVector{Float64}},
                             v::AbstractVector{Float64})
     throw(MethodError("propagate_dynamics not implemented with process noise for UnicycleDynamics"))
 end
 
-function linearize_dynamics(dyn::UnicycleDynamics, t, x::AbstractVector{Float64}, us::AbstractVector{<:AbstractVector{Float64}})
+function linearize_dynamics(dyn::UnicycleDynamics, time_range, x::AbstractVector{Float64}, us::AbstractVector{<:AbstractVector{Float64}})
     N = dyn.sys_info.num_agents
     @assert N == length(us)
     @assert xdim(dyn) == 4 * N
