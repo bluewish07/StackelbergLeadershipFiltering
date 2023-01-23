@@ -1,34 +1,36 @@
 using StackelbergControlHypothesesFiltering
 
 using Plots
+using Printf
 
+include("ConfigSimpleKinematic1DDynamics.jl")
 include("SimpleKinematic1DDynamics.jl")
 
+
+### RUN THE MODEL
 
 # Specify particle filter details.
 Ns = 100
 
-# Specify the initial discrete state prior distribution.
-p_init = 0.9
-s_prior_distrib = Bernoulli(p_init)
-
-# Specify the process noise.
-v_bar = zeros(2)
-Q = Diagonal([1.0^2, 0.5^2])
-process_noise_distribution = MvNormal(v_bar, Q)
-
 # Integrate process noise into the dynamics.
-gen_process_noise(rng, num_samples) = rand(rng, process_noise_distribution, num_samples)
+gen_process_noise(rng, num_samples) = zeros(2, num_samples)# rand(rng, process_noise_distribution, num_samples)
 f_dynamics_1(t_range, x, u, rng) = f₁(t_range, x, u, gen_process_noise(rng, size(x, 2)))
 f_dynamics_2(t_range, x, u, rng) = f₂(t_range, x, u, gen_process_noise(rng, size(x, 2)))
 f_dynamics = [f_dynamics_1, f_dynamics_2]
 
 # set controls
-u_inputs = zeros(1, num_data) # inputs should always be 1 or 0
+u_inputs = ones(1, num_data) # inputs should always be 1 or 0
+
+# Run the normal particle filter if needed for sanity checking.
+# x̂✶_PF, P_PF, z̄_PF, P̄_zz_PF, ϵ_bar, ϵ_hat, N̂s_n, particles =
+#                                 PF(x̄_prior,P_prior,u_inputs,t,t0,z,meas_R,f_dynamics_1,h₁,
+#                                 process_noise_distribution;seed=seed,Ns=Ns)
 
 x̂✶_PF, P_PF, z̄_PF, P̄_zz_PF, ϵ_bar, ϵ_hat, N̂s_n, s_PF, s_probs, particles = 
-    two_state_PF(x̄_prior,P_prior,u_inputs,s_prior_distrib,t,t0,z,R,discrete_state_transition,f_dynamics,[h₁, h₂],
+    two_state_PF(x̄_prior,P_prior,u_inputs,s_prior_distrib,t,t0,z,meas_R,discrete_state_transition,f_dynamics,[h₁, h₂],
                  ;seed=seed,Ns=Ns)
+
+### PLOT THE RESULTS
 
 x̂✶ = permutedims(x̂✶_PF,(2,1))
 P = permutedims(P_PF,(3,2,1))
@@ -37,44 +39,66 @@ P̄_zz = permutedims(P̄_zz_PF,(3,2,1))
 
 # 1. plot velocity signals
 s=1
-p1 = scatter(t, particles[1, :, :][:, :]', color=:black, markersize=0.25, label="")
-p1 = plot!(t, x_true[:, 1], label="true vel.", color=:blue)
-p1 = plot!(t, z[:, 1], label="meas.", color=:green)
+p1 = scatter(t, particles[1, :, :][:, :]', color=:black, markersize=0.15, label="", yrange=(-2.0,2.0), legend=:outertopright)
+if !only_pos_measurements
+    p1 = plot!(t, z[:, 1], label="meas.", color=:green)
+end
 p1 = plot!(t, x̂✶[:, 1], label="est. vel.", color=:red)
+p1 = plot!(t, x_true[:, 1], label="true vel.", color=:blue)
 
 # 2. plot position signals
 s=2
-p2 = scatter(t, particles[2, :, :][:, :]', color=:black, markersize=0.25, label="")
-p2 = plot!(t, x_true[:, 2], label="true pos.", color=:blue)
-p2 = plot!(t, z[:, 2], label="meas.", color=:green)
+p2 = scatter(t, particles[2, :, :][:, :]', color=:black, markersize=0.15, label="", yrange=(-5.0,5.0), legend=:outertopright)
+z_idx = (only_pos_measurements) ? 1 : 2
+p2 = plot!(t, z[:, z_idx], label="meas.", color=:green)
 p2 = plot!(t, x̂✶[:, 2], label="est. pos.", color=:red)
+p2 = plot!(t, x_true[:, 2], label="true pos.", color=:blue)
 
 # 3. compute expected probabilities and plot discrete state signals
+was_resampled = [resample_condition(Ns, N̂s) for N̂s in N̂s_n]
 expected_probs = zeros(2, num_data)
 expected_probs[:, 1] = [p_init; 1-p_init]
 for i in 2:num_data
     expected_probs[:, i] = disc_state_matrix * expected_probs[:, i-1]
+    # if was_resampled[i]
+    #     # This is slightly incorrect because
+    #     # 1. It relies on an out put produced by the algorithm.
+    #     # 2. it depends on whether s_probs is calculated before or after resampling.
+    #     #    Right now, it is before so we use the next probabilities in time.
+    #     ip1 = (i == num_data) ? num_data : i+1
+    #     p_new = s_probs[ip1]
+    #     expected_probs[:, i] = [p_new; 1-p_new]
+    # else
+    #     expected_probs[:, i] = disc_state_matrix * expected_probs[:, i-1]
+    # end
 end
 
 s=3
-p3 = plot(t, expected_probs[1, :], label="expected", title="Probability of being in state 1 (positive acceleration)")
+p3 = plot(t, expected_probs[1, :], label="expected w/ ICs", title="Probability of being in state 1 (positive acceleration)", yrange=(-0.1, 1.1), legend=:outertopright)
 p3 = plot!(t, s_probs', label="actual")
+p3 = plot!(t, true_prob_state1 * ones(ℓ), label="true", color=:black)
 
 display(plot(p1,p2,p3,layout=(3,1),size=(800,800),
         plot_title="1D kinematics system velocity and position with state"))
 
-# # RMS errors
-# errors = x̂✶ - x_true
-# # errors = x_true
-# position_rms_error = √(sum([errors[k,1]^2 for k in 1:ℓ])/ℓ)
-# velocity_rms_error = √(sum([errors[k,2]^2 for k in 1:ℓ])/ℓ)
 
-# println("RMS Errors - Normal Distribution Process Noise Assumption")
-# println("Position RMS error (m): ",position_rms_error)
-# println("Velocity RMS error (m/s): ",velocity_rms_error)
-# println("")
 
-# # error plots
+
+
+# RMS errors
+errors = x̂✶ - x_true
+position_rms_error = √(sum([errors[k,1]^2 for k in 1:ℓ])/ℓ)
+velocity_rms_error = √(sum([errors[k,2]^2 for k in 1:ℓ])/ℓ)
+
+println("RMS Errors - Normal Distribution Process Noise Assumption")
+println("Position RMS error (m): ",position_rms_error)
+println("Velocity RMS error (m/s): ",velocity_rms_error)
+println("")
+
+# ylims_pos = (-1., 1.0)
+# ylims_vel = (-1., 1.0)
+
+# # part 1 - error plots
 # s=1
 # p1 = plot(t, errors[:,s],
 #             linecolor=:gray,ylims=ylims_pos,
@@ -92,3 +116,53 @@ display(plot(p1,p2,p3,layout=(3,1),size=(800,800),
 
 # display(plot(p1,p2,layout=(2,1),size=(800,800),
 #         plot_title="Errors - Normal Distribution Process Noise Assumption"))
+
+
+# ## part 2 - residuals
+
+# # plots
+# s=1
+# p3 = plot(t, ϵ_bar[:,s], 
+#         title="Velocity (m)",
+#         label="Prediction",
+#         legend=true,xlabel="Time (sec)")
+# p3 = plot!(t, ϵ_hat[:,s],
+#         label="Post-fit")
+
+# s=2
+# p4 = plot(t, ϵ_bar[:,s], 
+#         title="Position (m/s)",
+#         label="Prediction",
+#         legend=true,xlabel="Time (sec)")
+# p4 = plot!(t, ϵ_hat[:,s],
+#         label="Post-fit")
+
+# display(plot(p3,p4,layout=(2,1),size=(1000,600),
+#             plot_title="Residuals - Uniform Distribution Process Noise Assumption"))
+
+# part 3 - statistics
+# println("Residuals Statistics - Uniform Distribution Process Noise Assumption")
+
+# s=1
+# println("Velocity:")
+# println("Prediction residuals mean: ", 
+#         @sprintf("%.2f",mean(ϵ_bar[:,s])), 
+#         "  Post-fit residuals mean: ",
+#         @sprintf("%.2f",mean(ϵ_hat[:,s])))
+# println("Prediction residuals standard deviation: ",
+#         @sprintf("%.2f",std(ϵ_bar[:,s])),
+#         "  Post-fit residuals standard deviation: ",
+#         @sprintf("%.2f",std(ϵ_hat[:,s])))
+# println("")
+
+# s=2
+# println("Position:")
+# println("Prediction residuals mean: ", 
+#         @sprintf("%.2f",mean(ϵ_bar[:,s])), 
+#         "  Post-fit residuals mean: ",
+#         @sprintf("%.2f",mean(ϵ_hat[:,s])))
+# println("Prediction residuals standard deviation: ",
+#         @sprintf("%.2f",std(ϵ_bar[:,s])),
+#         "  Post-fit residuals standard deviation: ",
+#         @sprintf("%.2f",std(ϵ_hat[:,s])))
+# println("")
