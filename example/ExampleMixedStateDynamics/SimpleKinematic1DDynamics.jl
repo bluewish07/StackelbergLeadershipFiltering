@@ -43,11 +43,13 @@ function generate_discrete_state_transition(p₁₁, p₂₂)
          1-p₁₁  p₂₂]
 
     # The discrete state transition stays in state i with probability pᵢ.
-    function discrete_state_transition(time_range, s_prev, 𝒳_prev, s_actions, rng)
+    function discrete_state_transition(time_range, s_prev, s_probs, 𝒳_prev, s_actions, rng)
+
         @assert length(s_prev) == 1
         s_prev = s_prev[1]
         sample = rand(rng, distribs[s_prev], 1)
 
+        # use markov chain to adjust over time
         other_state = (s_prev == 1) ? 2 : 1
         s_new = (isone(sample[1])) ? s_prev : other_state
 
@@ -72,7 +74,7 @@ function generate_dynamics(a)
     i = 1
 
     A(t) = [1 0; t 1]
-    B(t) = [t ; 0.5 * t^2][:,:] # The multiplier here is the difference between states.
+    B(t) = [t; 0][:,:] # The multiplier here is the difference between states.
     D(t) = [1 0; 0 1]
     function f_dynamics(t_range, x, u, v)
         t0 = t_range[1]
@@ -105,15 +107,21 @@ accel[.!is_1] .= a₂
 
 f = generate_dynamics(1) # in this case, the acceleration will be provided as input.
 
+n = zeros(size(data[:, 2:3]))
+n[1, :] = [v0;x0]
 for i in 2:num_data
-    time = t0 + (i-1) * dt
-    data[i, 1] = time
+    time = (i-1) * dt
+    data[i, 1] = t0 + time
+
+    # compute the time stepped version too, just to compare error - should be pretty small
     time_range = (time - dt, time)
-    data[i, 2:3] = f(time_range, data[i-1, 2:3], [accel[i]], zeros(2))
-    # accel[i] * dt + data[i-1, 2]
-    # true_pos   = accel[i] * dt^2 + data[i-1, 2] * dt + data[i-1, 3]
-    # data[i, 3] = true_pos
+    n[i, :] = f(time_range, n[i-1, :], [accel[i]], zeros(2))
+
+    data[i, 2] = accel[i] * dt + data[i-1, 2]
+    data[i, 3] = (1/2) * accel[i] * dt^2 + data[i-1, 2] * dt + data[i-1, 3]
 end
+println("final true dynamics: ", n[num_data, :])
+println("final true state: ", data[num_data, 2], " ", data[num_data, 3])
 
 # Make measurement distribution and generate measurement data.
 if only_pos_measurements

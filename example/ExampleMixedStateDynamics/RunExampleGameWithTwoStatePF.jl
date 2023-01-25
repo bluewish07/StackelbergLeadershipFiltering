@@ -2,6 +2,7 @@ using StackelbergControlHypothesesFiltering
 
 using Plots
 using Printf
+using StatsBase
 
 include("ConfigSimpleKinematic1DDynamics.jl")
 include("SimpleKinematic1DDynamics.jl")
@@ -30,6 +31,8 @@ x̂✶_PF, P_PF, z̄_PF, P̄_zz_PF, ϵ_bar, ϵ_hat, N̂s_n, s_PF, s_probs, parti
     two_state_PF(x̄_prior,P_prior,u_inputs,s_prior_distrib,t,t0,z,meas_R,discrete_state_transition,f_dynamics,[h₁, h₂],
                  ;seed=seed,Ns=Ns)
 
+println("final PF: ", x̂✶_PF[:, num_data])
+
 ### PLOT THE RESULTS
 
 x̂✶ = permutedims(x̂✶_PF,(2,1))
@@ -39,7 +42,7 @@ P̄_zz = permutedims(P̄_zz_PF,(3,2,1))
 
 # 1. plot velocity signals
 s=1
-p1 = scatter(t, particles[1, :, :][:, :]', color=:black, markersize=0.15, label="", yrange=(-2.0,2.0), legend=:outertopright)
+p1 = scatter(t, particles[1, :, :][:, :]', color=:black, markersize=0.15, label="", yrange=(-2.0,2.0), legend=:outertopright, ylabel="velocity (m/s)")
 if !only_pos_measurements
     p1 = plot!(t, z[:, 1], label="meas.", color=:green)
 end
@@ -48,7 +51,7 @@ p1 = plot!(t, x_true[:, 1], label="true vel.", color=:blue)
 
 # 2. plot position signals
 s=2
-p2 = scatter(t, particles[2, :, :][:, :]', color=:black, markersize=0.15, label="", yrange=(-5.0,5.0), legend=:outertopright)
+p2 = scatter(t, particles[2, :, :][:, :]', color=:black, markersize=0.15, label="", yrange=(-5.0,5.0), legend=:outertopright, ylabel="position (m)")
 z_idx = (only_pos_measurements) ? 1 : 2
 p2 = plot!(t, z[:, z_idx], label="meas.", color=:green)
 p2 = plot!(t, x̂✶[:, 2], label="est. pos.", color=:red)
@@ -56,44 +59,43 @@ p2 = plot!(t, x_true[:, 2], label="true pos.", color=:blue)
 
 # 3. compute expected probabilities and plot discrete state signals
 was_resampled = [resample_condition(Ns, N̂s) for N̂s in N̂s_n]
+println(sum(was_resampled))
 expected_probs = zeros(2, num_data)
 expected_probs[:, 1] = [p_init; 1-p_init]
 for i in 2:num_data
     expected_probs[:, i] = disc_state_matrix * expected_probs[:, i-1]
-    # if was_resampled[i]
-    #     # This is slightly incorrect because
-    #     # 1. It relies on an out put produced by the algorithm.
-    #     # 2. it depends on whether s_probs is calculated before or after resampling.
-    #     #    Right now, it is before so we use the next probabilities in time.
-    #     ip1 = (i == num_data) ? num_data : i+1
-    #     p_new = s_probs[ip1]
-    #     expected_probs[:, i] = [p_new; 1-p_new]
-    # else
-    #     expected_probs[:, i] = disc_state_matrix * expected_probs[:, i-1]
-    # end
+    if was_resampled[i]
+        # This is slightly incorrect because
+        # 1. It relies on an out put produced by the algorithm.
+        # 2. it depends on whether s_probs is calculated before or after resampling.
+        #    Right now, it is before so we use the next probabilities in time.
+        ip1 = (i == num_data) ? num_data : i+1
+        p_new = s_probs[ip1]
+        expected_probs[:, i] = [p_new; 1-p_new]
+    end
 end
 
 s=3
-p3 = plot(t, expected_probs[1, :], label="expected w/ ICs", title="Probability of being in state 1 (positive acceleration)", yrange=(-0.1, 1.1), legend=:outertopright)
+p3 = plot(t, expected_probs[1, :], label="Markov prob.\n w/ resamp.", title="Probability of positive accel.", yrange=(-0.1, 1.1), legend=:outertopright)
+p3 = plot!(t, mean(expected_probs[1, :]) * ones(num_data), label="actual avg.")
+# p3 = plot!(t, entropy.(expected_probs[1, :]), label="entropy")
 p3 = plot!(t, s_probs', label="actual")
-p3 = plot!(t, true_prob_state1 * ones(ℓ), label="true", color=:black)
+p3 = plot!(t, true_prob_state1 * ones(ℓ), label="true", color=:black, xlabel="time (s)", ylabel="p(pos. accel.)")
 
 display(plot(p1,p2,p3,layout=(3,1),size=(800,800),
         plot_title="1D kinematics system velocity and position with state"))
 
 
 
+# # RMS errors
+# errors = x̂✶ - x_true
+# position_rms_error = √(sum([errors[k,2]^2 for k in 1:ℓ])/ℓ)
+# velocity_rms_error = √(sum([errors[k,1]^2 for k in 1:ℓ])/ℓ)
 
-
-# RMS errors
-errors = x̂✶ - x_true
-position_rms_error = √(sum([errors[k,1]^2 for k in 1:ℓ])/ℓ)
-velocity_rms_error = √(sum([errors[k,2]^2 for k in 1:ℓ])/ℓ)
-
-println("RMS Errors - Normal Distribution Process Noise Assumption")
-println("Position RMS error (m): ",position_rms_error)
-println("Velocity RMS error (m/s): ",velocity_rms_error)
-println("")
+# println("RMS Errors - Normal Distribution Process Noise Assumption")
+# println("Position RMS error (m): ",position_rms_error)
+# println("Velocity RMS error (m/s): ",velocity_rms_error)
+# println("")
 
 # ylims_pos = (-1., 1.0)
 # ylims_vel = (-1., 1.0)

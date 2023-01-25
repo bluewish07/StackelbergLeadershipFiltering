@@ -132,7 +132,6 @@ function two_state_PF(x̄_prior,
         p = zeros(Ns)
 
         time_range = (t_prev, times[k])
-        # s_actions = u_inputs[:, k] * ones(Ns)
 
         for i in 1:Ns
             # 3a. Update the dynamics propagation to use the `propagate_dynamics` function.
@@ -140,8 +139,8 @@ function two_state_PF(x̄_prior,
             #            passing to `propagate_dynamics`.
             # [DONE] 3c. Dynamics propagation should update the discrete state. We can use a Bernoulli for simiplicity for now,
             #            but we may eventually want a more complicated Markov Chain.
-
-            s[:,i,k] = discrete_state_transition(time_range, s_prev[:,i], 𝒳_prev[:,i], u_inputs[:,k], rng)
+            s_probs_in = vcat(ŝ_probs[:, k], [1]-ŝ_probs[:, k])[:]
+            s[:,i,k] = discrete_state_transition(time_range, s_prev[:,i], s_probs_in, 𝒳_prev[:,i], u_inputs[:,k], rng)
 
             # Resample the state for each particle and extract an index to select the dynamics.
             s_idx = s_prev[:,i][1]
@@ -164,12 +163,6 @@ function two_state_PF(x̄_prior,
             z̄[:,k] += weights_prev[i] * 𝒵[:,i,k]
         end
 
-        # 4. [DONE] Generate an empirical weighted probability of being in state 1 and store that.
-        # TODO(hamzah) Generalize this for more than one discrete state when needed.
-        # BUG?: Should this be before or after resampling?
-        in_state_1 = isone.(s[:, :, k])[:]
-        ŝ_probs[:, k] .= sum(w[in_state_1, k])
-
         # calculate empirical weighted covariances
         P[:,:,k] = sum(w[i,k] * (𝒳[:,i,k] - x̂[:,k]) * (𝒳[:,i,k] - x̂[:,k])'
                        for i in 1:Ns)
@@ -184,6 +177,12 @@ function two_state_PF(x̄_prior,
             𝒳[:, :, k], s[:, :, k] = resample_particles_w_discrete_state(rng, Ns, 𝒳[:, :, k], s[:, :, k], w[:, k])
             w[:,k] = initialize_weights(Ns)
         end
+
+        # 4. [DONE] Generate an empirical weighted probability of being in state 1 and store that.
+        # TODO(hamzah) Generalize this for more than one discrete state when needed.
+        # BUG?: Should this be before or after resampling?
+        in_state_1 = isone.(s[:, :, k])[:]
+        ŝ_probs[:, k] .= sum(w[in_state_1, k])
 
         # calculate residuals
         ϵ_bar[k,:] = z[k,:] - z̄[:,k]
