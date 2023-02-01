@@ -17,10 +17,10 @@ only_pos_measurements = false
 
 
 # The true generative probability of being in state 1 - used to generate the truth data.
-true_prob_state1 = 0.5
+true_prob_state1 = 0.7
 
 # Acceleration magnitude for both state 1 and 2 (which are in opposite directions). Used to generate true data and dynamics.
-accel_magnitude = 0.3
+accel_magnitude = 3.
 
 # Set the initial state manually.
 t0 = 0.0

@@ -41,8 +41,10 @@ z̄ = permutedims(z̄_PF,(2,1))
 P̄_zz = permutedims(P̄_zz_PF,(3,2,1))
 
 # 1. plot velocity signals
+plot_mult = 3.0
+
 s=1
-p1 = scatter(t, particles[1, :, :][:, :]', color=:black, markersize=0.15, label="", yrange=(-2.0,2.0), legend=:outertopright, ylabel="velocity (m/s)")
+p1 = scatter(t, particles[1, :, :][:, :]', color=:black, markersize=0.15, label="", yrange=(-plot_mult*2.0,plot_mult*2.0), legend=:outertopright, ylabel="velocity (m/s)")
 if !only_pos_measurements
     p1 = plot!(t, z[:, 1], label="meas.", color=:green)
 end
@@ -51,7 +53,7 @@ p1 = plot!(t, x_true[:, 1], label="true vel.", color=:blue)
 
 # 2. plot position signals
 s=2
-p2 = scatter(t, particles[2, :, :][:, :]', color=:black, markersize=0.15, label="", yrange=(-5.0,5.0), legend=:outertopright, ylabel="position (m)")
+p2 = scatter(t, particles[2, :, :][:, :]', color=:black, markersize=0.15, label="", yrange=(-plot_mult*5.0,plot_mult*5.0), legend=:outertopright, ylabel="position (m)")
 z_idx = (only_pos_measurements) ? 1 : 2
 p2 = plot!(t, z[:, z_idx], label="meas.", color=:green)
 p2 = plot!(t, x̂✶[:, 2], label="est. pos.", color=:red)
