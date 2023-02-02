@@ -71,8 +71,8 @@ function solve_approximated_lqr_feedback(dyn::Dynamics,
                                          cost::Cost,
                                          horizon::Int,
                                          t0::Float64,
-                                         x_refs::AbstractArray{Float64},
-                                         u_refs::AbstractArray{Float64})
+                                         xs_1::AbstractArray{Float64},
+                                         us_1::AbstractArray{Float64})
     T = horizon
     N = num_agents(dyn)
 
@@ -83,8 +83,8 @@ function solve_approximated_lqr_feedback(dyn::Dynamics,
         prev_time = t0 + ((tt == 1) ? 0 : tt-1)
         current_time = t0 + tt
         time_range = (prev_time, current_time)
-        lin_dyns[tt] = linearize_dynamics(dyn, time_range, x_refs[:, tt], [u_refs[:, tt]])
-        quad_costs[tt] = quadraticize_costs(cost, time_range, x_refs[:, tt], [u_refs[:, tt]])
+        lin_dyns[tt] = linearize_dynamics(dyn, time_range, xs_1[:, tt], [us_1[:, tt]])
+        quad_costs[tt] = affinize_costs(cost, time_range, xs_1[:, tt], [us_1[:, tt]])
     end
 
     return solve_lqr_feedback(lin_dyns, quad_costs, T)
