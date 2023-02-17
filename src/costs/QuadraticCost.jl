@@ -18,7 +18,7 @@ QuadraticCost(Q::AbstractMatrix{Float64}, q::AbstractVector{Float64}, cq::Float6
                                                                                                    Dict{Int, Vector{eltype(q)}}(),
                                                                                                    Dict{Int, eltype(cq)}())
 
-function add_control_cost!(c::QuadraticCost, other_player_idx, Rij; rj=zeros(size(Rij, 1))::AbstractVector{Float64}, crj=1.::Float64)
+function add_control_cost!(c::QuadraticCost, other_player_idx, Rij; rj=zeros(size(Rij, 1))::AbstractVector{Float64}, crj=0.::Float64)
     @assert size(Rij, 1) == size(Rij, 2) == size(rj, 1)
     @assert size(crj) == ()
 
@@ -34,8 +34,8 @@ function quadraticize_costs(c::QuadraticCost, time_range, x::AbstractVector{Floa
     # Fill control costs.
     num_players = length(c.Rs)
     for ii in 1:num_players
-        R̃s = homogenize_cost_matrix(c.Rs[ii], c.rs[ii], c.crs[ii])
-        add_control_cost!(q_cost, ii, R̃s)
+        R̃ = homogenize_cost_matrix(c.Rs[ii], c.rs[ii], c.crs[ii];)
+        add_control_cost!(q_cost, ii, R̃)
     end
 
     return q_cost
@@ -46,12 +46,12 @@ function compute_cost(c::QuadraticCost, time_range, xh::AbstractVector{Float64},
     out_size = size(c.Q, 1)
     x = xh[1:out_size]
 
-    total = (1/2.) * x' * c.Q * x + c.q' * x + c.cq
+    total = (1/2.) * x' * c.Q * x + c.q' * x + (1/2.) * c.cq
     for ii in 1:num_players
         out_size = size(c.Rs[ii], 1)
         u = uhs[ii][1:out_size]
 
-        total += (1/2.) * u' * c.Rs[ii] * u + c.rs[ii]' * u + c.crs[ii]
+        total += (1/2.) * u' * c.Rs[ii] * u + c.rs[ii]' * u + (1/2.) * c.crs[ii]
     end
     return total
 end
