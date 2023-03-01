@@ -13,25 +13,27 @@ FeedbackGainControlStrategy(Ps::AbstractVector{<:AbstractArray{Float64, 3}},
                             ps::AbstractVector{<:AbstractMatrix{Float64}}=[zeros(size(Ps[ii], 1), size(Ps[ii], 3)) for ii in 1:length(Ps)]) = FeedbackGainControlStrategy(length(Ps), size(Ps[1], 3), Ps, ps)
 
 # This function accepts a feedback gain control strategy and applies it to a state at a given time (i.e. index).
-function apply_control_strategy(tt::Int, strategy::FeedbackGainControlStrategy, x::AbstractArray{Float64})
+function apply_control_strategy(tt::Int, strategy::FeedbackGainControlStrategy, xh::AbstractArray{Float64})
+    num_x = size(strategy.Ps[1], 2)
+    x = xh[1:num_x]
     return [-strategy.Ps[ii][:, :, tt] * x - strategy.ps[ii][:, tt] for ii in 1:strategy.num_players]
 end
 
 
 # Define some getters.
-function get_linear_feedback_terms(strategy::FeedbackGainControlStrategy)
+function get_linear_feedback_term(strategy::FeedbackGainControlStrategy)
     return strategy.Ps
 end
 
-function get_linear_feedback_terms(strategy::FeedbackGainControlStrategy, player_idx::Int)
+function get_linear_feedback_term(strategy::FeedbackGainControlStrategy, player_idx::Int)
     return strategy.Ps[player_idx]
 end
 
-function get_constant_feedback_terms(strategy::FeedbackGainControlStrategy)
+function get_constant_feedback_term(strategy::FeedbackGainControlStrategy)
     return strategy.ps
 end
 
-function get_constant_feedback_terms(strategy::FeedbackGainControlStrategy, player_idx::Int)
+function get_constant_feedback_term(strategy::FeedbackGainControlStrategy, player_idx::Int)
     return strategy.ps[player_idx]
 end
 
