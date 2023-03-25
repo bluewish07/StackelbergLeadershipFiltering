@@ -12,7 +12,6 @@ println("initial state: ", x0')
 println("desired state at time T: ", round.(xf', sigdigits=6), " over ", round(horizon, sigdigits=4), " seconds.")
 
 ctrl_strats, _ = solve_lqr_feedback(dyn, lqr_quad_cost_x0, T)
-
 xs_i, us_i = unroll_feedback(dyn, times, ctrl_strats, x0)
 
 final_cost_total = evaluate(quad_w_offset_cost, xs_i, us_i)
