@@ -1,9 +1,13 @@
-# include("RunSILQGamesOnLQExample.jl")
-include("RunSILQGamesOnQuadraticNonlinearGame.jl")
+include("RunSILQGamesOnLQExample.jl")
+# include("RunSILQGamesOnQuadraticNonlinearGame.jl")
 
 using Plots
 using ProgressBars
 gr()
+
+# These scripts should require one run of SILQGames.
+@assert sg_obj.num_runs == 1
+N = sg_obj.num_iterations[1]
 
 iter = ProgressBar(1:N)
 anim = @animate for k in iter
