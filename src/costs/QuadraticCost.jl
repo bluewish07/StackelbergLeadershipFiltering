@@ -90,7 +90,7 @@ function get_constant_control_cost_term(c::QuadraticCost, player_idx::Int)
     return deepcopy(c.crs[player_idx])
 end
 
-# Export all the cost type.
+# Export the cost type.
 export QuadraticCost
 
 # Export the helpers.
