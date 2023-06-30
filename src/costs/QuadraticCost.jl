@@ -1,4 +1,5 @@
 # Affine costs with quadratic, linear, constant terms.
+# J(time_range, x, us) = (1/2) * () 
 
 mutable struct QuadraticCost <: Cost
     Q::AbstractMatrix{Float64}
