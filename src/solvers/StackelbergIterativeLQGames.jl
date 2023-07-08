@@ -150,7 +150,7 @@ function stackelberg_ilqgames(sg::SILQGamesObject,
         end
 
         # 2. Solve the optimal control problem wrt δx to produce the homogeneous feedback and cost matrices.
-        ctrl_strats, _ = solve_lq_stackelberg_feedback(lin_dyns, quad_costs, T, leader_idx; state_reg_param=sg.state_reg_param, control_reg_param=sg.control_reg_param)
+        ctrl_strats, _ = solve_lq_stackelberg_feedback(lin_dyns, quad_costs, T, leader_idx; state_reg_param=sg.state_reg_param, control_reg_param=sg.control_reg_param, ensure_pd=true)
         Ks = get_linear_feedback_gains(ctrl_strats)
         ks = get_constant_feedback_gains(ctrl_strats)
 

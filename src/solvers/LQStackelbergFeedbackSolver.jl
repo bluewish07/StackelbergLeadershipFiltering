@@ -26,7 +26,7 @@ end
 function solve_lq_stackelberg_feedback(dyns::AbstractVector{LinearDynamics},
                                        all_costs::AbstractVector{<:AbstractVector{QuadraticCost}},
                                        horizon::Int,
-                                       leader_idx::Int; state_reg_param=0.0, control_reg_param=0.0, ensure_pd=true)
+                                       leader_idx::Int; state_reg_param=0., control_reg_param=1e-32, ensure_pd=false)
 
     # Ensure the number of dynamics and costs are the same as the horizon.
     @assert !isempty(dyns) && size(dyns, 1) == horizon
@@ -71,9 +71,9 @@ function solve_lq_stackelberg_feedback(dyns::AbstractVector{LinearDynamics},
         R₁₂ = get_homogenized_control_cost_matrix(costs[leader_idx], follower_idx)
         R₂₁ = get_homogenized_control_cost_matrix(costs[follower_idx], leader_idx)
 
-        # Ensure that we have positive definiteness in the relevant costs.
-        @assert isposdef(Q_leader)
-        @assert isposdef(Q_follower)
+        # Ensure that we have (semi-)positive definiteness in the relevant costs.
+        @assert isposdef(Q_leader) || minimum(eigvals(Q_leader)) == 0
+        @assert isposdef(Q_follower) || minimum(eigvals(Q_follower)) == 0
         @assert isposdef(R₁₁)
         @assert isposdef(R₂₂)
 

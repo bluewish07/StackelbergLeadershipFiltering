@@ -34,18 +34,8 @@ export homogenize_dynamics_matrix
 ###########################################
 
 # Produces a symmetric matrix.
-# If we need to perform a spectral shift to enforce PD-ness, we can set ρ accordingly.
 function homogenize_cost_matrix(M::AbstractMatrix{T}, m=zeros(size(M, 1))::AbstractVector{T}, cm=0.0::T, ρ=nothing) where {T}
-    # If we're gonna have problems with singularity, then spectral shift the matrix.
-    if all(iszero.(m)) && cm == 0.0 && ρ == nothing
-        ρ = 1e-32
-    elseif (ρ == nothing)
-        ρ = 0.0
-    end
-
-    M_dim = size(M, 1)
-    return vcat(hcat(M ,  m),
-                hcat(m', cm)) + ρ * I
+    return vcat(hcat(M ,  m), hcat(m', cm))
 end
 
 
@@ -63,7 +53,7 @@ function regularize_matrix(M, reg_param, ensure_pd)
     reg_M = deepcopy(M)
     if ensure_pd
         eig_min = minimum(eigvals(M))
-        @assert eig_min ≤ 0
+        @assert eig_min ≤ 1e-32 # some leeway for small positives...
         reg_M = reg_M + abs(eig_min) * I
     end
 
