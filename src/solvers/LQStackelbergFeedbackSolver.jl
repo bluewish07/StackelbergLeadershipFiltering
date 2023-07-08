@@ -26,7 +26,7 @@ end
 function solve_lq_stackelberg_feedback(dyns::AbstractVector{LinearDynamics},
                                        all_costs::AbstractVector{<:AbstractVector{QuadraticCost}},
                                        horizon::Int,
-                                       leader_idx::Int)
+                                       leader_idx::Int; state_reg_param=0.0, control_reg_param=0.0, ensure_pd=true)
 
     # Ensure the number of dynamics and costs are the same as the horizon.
     @assert !isempty(dyns) && size(dyns, 1) == horizon
@@ -63,13 +63,19 @@ function solve_lq_stackelberg_feedback(dyns::AbstractVector{LinearDynamics},
         B_leader = get_homogenized_control_dynamics_matrix(dyn, leader_idx)
         B_follower = get_homogenized_control_dynamics_matrix(dyn, follower_idx)
 
-        Q_leader = get_homogenized_state_cost_matrix(costs[leader_idx])
-        Q_follower = get_homogenized_state_cost_matrix(costs[follower_idx])
+        Q_leader = get_homogenized_state_cost_matrix(costs[leader_idx]; reg_param=state_reg_param, ensure_pd=ensure_pd)
+        Q_follower = get_homogenized_state_cost_matrix(costs[follower_idx]; reg_param=state_reg_param, ensure_pd=ensure_pd)
 
-        R₁₁ = get_homogenized_control_cost_matrix(costs[leader_idx], leader_idx)
-        R₂₂ = get_homogenized_control_cost_matrix(costs[follower_idx], follower_idx)
+        R₁₁ = get_homogenized_control_cost_matrix(costs[leader_idx], leader_idx; reg_param=control_reg_param, ensure_pd=ensure_pd)
+        R₂₂ = get_homogenized_control_cost_matrix(costs[follower_idx], follower_idx; reg_param=control_reg_param, ensure_pd=ensure_pd)
         R₁₂ = get_homogenized_control_cost_matrix(costs[leader_idx], follower_idx)
         R₂₁ = get_homogenized_control_cost_matrix(costs[follower_idx], leader_idx)
+
+        # Ensure that we have positive definiteness in the relevant costs.
+        @assert isposdef(Q_leader)
+        @assert isposdef(Q_follower)
+        @assert isposdef(R₁₁)
+        @assert isposdef(R₂₂)
 
         Lₖ₊₁ = [all_Ls[leader_idx][:, :, tt+1], all_Ls[follower_idx][:, :, tt+1]]
 

@@ -18,6 +18,18 @@ QuadraticCost(Q::AbstractMatrix{Float64}, q::AbstractVector{Float64}, cq::Float6
                                                                                                    Dict{Int, Vector{eltype(q)}}(),
                                                                                                    Dict{Int, eltype(cq)}())
 
+function get_as_function(c::QuadraticCost)
+    f(si, x, us, t) = begin
+        cost = (1//2) * (x' * c.Q * x) + (x' * c.q) + c.cq
+        cost = cost + (1//2) * us[1]' * c.Rs[1] * us[1] + (us[1]' * c.rs[1]) + c.crs[1]
+        cost = cost + (1//2) * us[2]' * c.Rs[2] * us[2] + (us[2]' * c.rs[2]) + c.crs[2]
+        return cost
+    end
+    return f
+end
+export get_as_function
+
+
 function add_control_cost!(c::QuadraticCost, other_player_idx, R; r=zeros(size(R, 1))::AbstractVector{Float64}, cr=0.::Float64)
     @assert size(R, 1) == size(R, 2) == size(r, 1)
     @assert size(cr) == ()
@@ -36,9 +48,9 @@ end
 
 function compute_cost(c::QuadraticCost, time_range, x::AbstractVector{Float64}, us::AbstractVector{<:AbstractVector{Float64}})
     num_players = length(us)
-    total = (1/2.) * (x' * c.Q * x + 2 * c.q' * x + c.cq)
+    total = (1/2.) * x' * c.Q * x + c.q' * x + c.cq
     if !isempty(c.Rs)
-        total += (1/2.) * sum(us[jj]' * R * us[jj] + 2 * us[jj]' * c.rs[jj] + c.crs[jj] for (jj, R) in c.Rs)
+        total += sum((1/2.) * us[jj]' * R * us[jj] + us[jj]' * c.rs[jj] + c.crs[jj] for (jj, R) in c.Rs)
     end
     return total
 end
