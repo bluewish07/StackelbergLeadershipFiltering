@@ -35,6 +35,7 @@ mutable struct SILQGamesObject
     # regularization config
     state_reg_param::Float64
     control_reg_param::Float64
+    ensure_pd::Bool
 
     # who was the leader each time we ran
     leader_idxs::AbstractVector{<:Int}
@@ -55,7 +56,7 @@ THRESHOLD = 1e-2
 MAX_ITERS = 100
 # initialize_silq_games_object - initializes an SILQ Games Object which contains the data required within the algorithm
 function initialize_silq_games_object(num_runs, horizon, dyn::Dynamics, costs::AbstractVector{<:Cost};
-                                      state_reg_param=1e-2, control_reg_param=1e-2,
+                                      state_reg_param=1e-2, control_reg_param=1e-2, ensure_pd=true,
                                       threshold::Float64 = THRESHOLD, max_iters = MAX_ITERS,
                                       step_size=1.0, ss_reduce=1e-2, α_min=1e-2, max_linesearch_iters=10,
                                       check_valid=(xs, us, ts)->true, verbose=false)
@@ -81,7 +82,7 @@ function initialize_silq_games_object(num_runs, horizon, dyn::Dynamics, costs::A
                            threshold, max_iters, 
                            step_size, ss_reduce, α_min, max_linesearch_iters, 
                            check_valid, verbose,
-                           state_reg_param, control_reg_param,
+                           state_reg_param, control_reg_param, ensure_pd,
                            leader_idxs,
                            xks, uks,
                            Kks, kks, convergence_metrics, num_iterations, evaluated_costs)
@@ -235,6 +236,9 @@ function stackelberg_ilqgames(sg::SILQGamesObject,
         ###########################
         #### I. Backwards pass ####
         ###########################
+        # 1. Extract linear dynamics and quadratic costs wrt to the current guess for the state and controls.
+            # 2. Solve the optimal control problem wrt δx to produce the homogeneous feedback and cost matrices.
+
         ctrl_strats = backward_pass(sg, leader_idx, t0, times, xs_km1, us_km1)
         Ks = get_linear_feedback_gains(ctrl_strats)
         ks = get_constant_feedback_gains(ctrl_strats)
