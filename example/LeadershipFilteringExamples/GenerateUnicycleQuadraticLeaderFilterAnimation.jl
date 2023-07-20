@@ -35,8 +35,6 @@ x̂s, P̂s, probs, pf, sg_objs = leadership_filter(dyn, costs, t0, times,
                            Ns=num_particles,
                            verbose=false)
 
-# true_xs = xs
-
 using Dates
 using Plots
 using Printf
@@ -111,12 +109,19 @@ anim = @animate for t in iter
 
     # plot 4 - accel. controls
     title5 = "Input acceleration controls (u)"
-    p5 = plot(legend=:outertopright, xlabel="t (s)", ylabel="accel. (m/s^2)", title=title5)
-    plot!(p5, times[1:T], us[1][1, 1:T], label="P1 ω")
-    plot!(p5, times[1:T], us[2][1, 1:T], label="P2 ω")
-    plot!(p5, times[1:T], us[1][2, 1:T], label="P1 a")
-    plot!(p5, times[1:T], us[2][2, 1:T], label="P2 a")
-    plot!(p5, [times[t], times[t]], [-1, 1], label="", color=:black)
+    p4 = plot(legend=:outertopright, xlabel="t (s)", ylabel="accel. (m/s^2)", title=title5)
+    plot!(p4, times[1:T], us[1][1, 1:T], label="P1 ω")
+    plot!(p4, times[1:T], us[2][1, 1:T], label="P2 ω")
+    plot!(p4, times[1:T], us[1][2, 1:T], label="P1 a")
+    plot!(p4, times[1:T], us[2][2, 1:T], label="P2 a")
+    plot!(p4, [times[t], times[t]], [-1, 1], label="", color=:black)
+
+    # probability plots 5 and 6
+    title5 = "Probability over time for P1"
+    title6 = "Probability over time for P2"
+    p5, p6 = make_probability_plots(leader_idx, times[1:T], t, probs[1:T])
+    plot!(p5, title=title5)
+    plot!(p6, title=title6)
 
     plot(p1a, p1b, p2, p3, p4, p5, p6, plot_title=plot_title, layout = p, size=(1260, 1080))
 end

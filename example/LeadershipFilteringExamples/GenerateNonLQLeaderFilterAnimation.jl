@@ -44,7 +44,6 @@ using Printf
 using ProgressBars
 gr()
 
-
 # This generates a pdf.
 
 # Create the folder if it doesn't exist
