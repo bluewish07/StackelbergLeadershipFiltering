@@ -47,7 +47,7 @@ gr()
 # This generates a pdf.
 
 # Create the folder if it doesn't exist
-folder_name = "nonlq_L$(leader_idx)_leadfilt_$(Dates.now())"
+folder_name = "nonlq_L$(leader_idx)_leadfilt_$(get_date_str())"
 isdir(folder_name) || mkdir(folder_name)
 
 snapshot_freq = Int((T - 1)/10)
@@ -66,7 +66,7 @@ for t in iter1
 
     p1b = plot_leadership_filter_measurement_details(num_particles, sg_objs[t], true_xs[:, 1:T], x̂s)
 
-    p5, p6 = make_probability_plots(times[1:T], t, probs[1:T]; include_gt_val=leader_idx)
+    p5, p6 = make_probability_plots(times[1:T], probs[1:T]; t_idx=t, include_gt=leader_idx)
     plot!(p5, title="")
     plot!(p6, title="")
 
@@ -113,16 +113,16 @@ anim = @animate for t in iter
     # plot 4 - accel. controls
     title5 = "Input acceleration controls (u) over time"
     p4 = plot(legend=:outertopright, xlabel="t (s)", ylabel="accel. (m/s^2)", title=title5)
-    plot!(p4, times[1:T], us[1][1, 1:T], label="P1 ω")
-    plot!(p4, times[1:T], us[2][1, 1:T], label="P2 ω")
-    plot!(p4, times[1:T], us[1][2, 1:T], label="P1 a")
-    plot!(p4, times[1:T], us[2][2, 1:T], label="P2 a")
+    plot!(p4, times[1:T], us[1][1, 1:T], label=L"\mathcal{A}_1 ω")
+    plot!(p4, times[1:T], us[2][1, 1:T], label=L"\mathcal{A}_2 ω")
+    plot!(p4, times[1:T], us[1][2, 1:T], label=L"\mathcal{A}_1 a")
+    plot!(p4, times[1:T], us[2][2, 1:T], label=L"\mathcal{A}_2 a")
     plot!(p4, [times[t], times[t]], [-1, 1], label="", color=:black)
 
     # probability plots 5 and 6
     title5 = "Probability over time for P1"
     title6 = "Probability over time for P2"
-    p5, p6 = make_probability_plots(times[1:T], t, probs[1:T]; include_gt_val=leader_idx)
+    p5, p6 = make_probability_plots(times[1:T], probs[1:T]; t_idx=t, include_gt=leader_idx)
     plot!(p5, title=title5)
     plot!(p6, title=title6)
 

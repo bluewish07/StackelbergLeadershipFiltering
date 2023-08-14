@@ -1,5 +1,7 @@
 # Utilities
 
+using Dates
+
 # TODO(hamzah) - Combine split_vec and split functions.
 
 # A function that splits 2D arrays into vectors of 2D arrays
@@ -88,13 +90,13 @@ export SystemInfo, num_agents, xdim, udim, udims, vdim, sampling_time, is_contin
 # Note: implementations using the mod operator cause havoc with autodiff.
 function wrap_angle(angle_rad)
     ang = angle_rad + pi
-    while angle_rad >= 2*pi
-        angle_rad -= 2*pi
+    while ang >= 2*pi
+        ang -= 2*pi
     end
-    while angle_rad < 0
-        angle_rad += 2*pi
+    while ang < 0
+        ang += 2*pi
     end
-    return angle_rad - pi
+    return ang - pi
 
     # ang = angle_rad
     # while abs(angle_rad) >= pi
@@ -104,3 +106,20 @@ function wrap_angle(angle_rad)
 end
 
 export wrap_angle
+
+
+
+function get_date_str()
+    # Get the current date and time
+    current_datetime = Dates.now()
+
+    # Extract the month, day, hour, and minute
+    current_month = Dates.month(current_datetime)
+    current_day = Dates.day(current_datetime)
+    current_hour = Dates.hour(current_datetime)
+    current_minute = Dates.minute(current_datetime)
+
+    # Create a formatted string
+    return string(current_month, "_", current_day, "_", current_hour, "_", current_minute)
+end
+export get_date_str

@@ -13,16 +13,12 @@ ss_costs = ShepherdAndSheepCosts(dyn)
 num_players = num_agents(dyn)
 
 
-function make_quadratic_player_cost(si, ss_costs, player_idx)
-    f = get_as_function(ss_costs[player_idx])
-    return PlayerCost(f, si)
-end
-pc_cost_1 = make_quadratic_player_cost(dyn.sys_info, ss_costs, 1)
-pc_cost_2 = make_quadratic_player_cost(dyn.sys_info, ss_costs, 2)
-costs = [pc_cost_1, pc_cost_2]
+fs = get_as_function.(ss_costs)
+pc_cost_1 = PlayerCost(fs[1], dyn.sys_info)
+pc_cost_2 = PlayerCost(fs[2], dyn.sys_info)
 
 
-leader_idx = 2
+leader_idx = 1
 # Initial condition chosen randomly. Ensure both have relatively low speed.
 x₁ = [2.; 0.; 1.; 0.; -1.; 0; 2; 0]
 pos_unc = 1e-3
@@ -30,7 +26,7 @@ vel_unc = 1e-4
 P₁ = Diagonal([pos_unc, vel_unc, pos_unc, vel_unc, pos_unc, vel_unc, pos_unc, vel_unc])
 
 # Process noise uncertainty
-Q = 1e-1 * Diagonal([1e-2, 1e-4, 1e-2, 1e-4, 1e-2, 1e-4, 1e-2, 1e-4])
+Q = 1e-2 * Diagonal([1e-2, 1e-4, 1e-2, 1e-4, 1e-2, 1e-4, 1e-2, 1e-4])
 
 
 # CONFIG: 
@@ -38,7 +34,7 @@ Q = 1e-1 * Diagonal([1e-2, 1e-4, 1e-2, 1e-4, 1e-2, 1e-4, 1e-2, 1e-4])
 # 
 rng = MersenneTwister(0)
 
-R = 0.01 * Matrix(I, xdim(dyn), xdim(dyn))
+R = 0.005 * Matrix(I, xdim(dyn), xdim(dyn))
 zs = zeros(xdim(dyn), T)
 Ts = 30
 num_games = 1
@@ -49,7 +45,7 @@ p_init = 0.5
 
 
 # We use these in the measurement model.
-threshold = 1e-3
+threshold = 1.5e-2
 max_iters = 50
 step_size = 1e-2
 
