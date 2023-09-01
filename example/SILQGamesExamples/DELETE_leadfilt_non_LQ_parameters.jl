@@ -3,7 +3,7 @@ using StackelbergControlHypothesesFiltering
 using Random
 
 dt = 0.02
-T = 251
+T = 501
 t0 = 0.0
 horizon = T * dt
 # TODO(hamzah) - We do double the times as needed so that there's extra for the Stackelberg history. Make this tight.
@@ -28,9 +28,11 @@ x₁ = [2.; 1.; 7*pi/4; 0.; -1.; 2; -pi/4; 0] # unicycle dynamics
 # x₁ = rand(rng, 8)
 # x₁[[2, 4, 6, 8]] .= 0
 
-pos_unc = 1e-3
-vel_unc = 1e-4
-P₁ = Diagonal([pos_unc, vel_unc, pos_unc, vel_unc, pos_unc, vel_unc, pos_unc, vel_unc])
+pos_unc = 1e-2
+vel_unc = 1e-3
+heading_unc = 1e-3
+
+P₁ = Diagonal([pos_unc, pos_unc, heading_unc, vel_unc, pos_unc, pos_unc, heading_unc, vel_unc])
 
 # Process noise uncertainty
 # Q = 1e-2 * Diagonal([1e-2, 1e-4, 1e-2, 1e-4, 1e-2, 1e-4, 1e-2, 1e-4])
@@ -46,7 +48,7 @@ R = 0.02 * Matrix(I, xdim(dyn), xdim(dyn))
 zs = zeros(xdim(dyn), T)
 Ts = 30
 num_games = 1
-num_particles = 100
+num_particles = 200
 
 p_transition = 0.98
 p_init = 0.5
