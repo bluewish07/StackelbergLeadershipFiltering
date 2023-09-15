@@ -6,7 +6,8 @@ using LaTeXStrings
 using Plots
 
 function get_standard_plot(;include_legend=:outertop, columns=-1, legendfontsize=18)
-    return plot(legendfontsize=legendfontsize, tickfontsize=18, fontsize=18, labelfontsize=18, legend=include_legend, legend_columns=columns, fg_legend = :transparent)
+    return plot(legendfontsize=legendfontsize, tickfontsize=18, fontsize=18, labelfontsize=18, legend=include_legend, legend_columns=columns, fg_legend = :transparent, size=(800,600),
+                leftmargin=5Plots.mm, bottommargin=5Plots.mm)
 end
 export get_standard_plot
 
@@ -287,7 +288,7 @@ function plot_leadership_filter_measurement_details(dyn::Dynamics, particle_lead
     y2_idx = yidx(dyn, 2)
 
     if include_all_labels
-        p2 = get_standard_plot(;columns=3, legendfontsize=12)
+        p2 = get_standard_plot(;columns=2, legendfontsize=12)
         p1_est_label = L"$\mathcal{A}_1$ Estimate"
         # p1_truth_label = L"$\mathcal{A}_1$ Truth"
         p1_truth_label = "Truth"
@@ -308,7 +309,7 @@ function plot_leadership_filter_measurement_details(dyn::Dynamics, particle_lead
     # If t is provided, annotate the plot.
     if !isnothing(t) && !isnothing(letter)
         plot!(ylabel="", xlabel="")
-        annotate!(p2, 1.2, 1.8, text("($(letter)) meas. model\ntime step $(t)", 30))
+        annotate!(p2, 1.1, 1.8, text("($(letter)) measurement model\ntime step $(t)", 30))
     end
 
     plot!(p2, true_xs[x1_idx, :], true_xs[y1_idx, :], color=:black, linewidth=3, label=p1_truth_label)
@@ -331,8 +332,8 @@ function plot_leadership_filter_measurement_details(dyn::Dynamics, particle_lead
         does_p1_lead = (particle_leader_idxs_t[n] == 1)
 
         color = (does_p1_lead) ? "red" : "blue"
-        label_1 = (!has_labeled_p1 && does_p1_lead) ? L"$\mathcal{A}_1$ Meas. Model" : ""
-        label_2 = (!has_labeled_p2 && !does_p1_lead) ? L"$\mathcal{A}_2$ Meas. Model" : ""
+        label_1 = (!has_labeled_p1 && does_p1_lead) ? L"$\mathcal{A}_1$ Measurement Model" : ""
+        label_2 = (!has_labeled_p2 && !does_p1_lead) ? L"$\mathcal{A}_2$ Measurement Model" : ""
 
         if label_1 != ""
             has_labeled_p1 = true
@@ -394,7 +395,7 @@ function make_probability_plots(times, probs; player_to_plot=nothing, t_idx=noth
             # label_str = ""
             # vline!(plot, [t], label="Max Iterations", color=:black, linewidth=3)
         end
-        annotate!(plot, 8.5, 1.1, "steps", 18)
+        # annotate!(plot, 8.5, 1.1, "steps", 18)
     end
 
 
