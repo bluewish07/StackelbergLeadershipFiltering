@@ -1,4 +1,4 @@
-# Stackelberg Control Hypotheses Filtering
+# Stackelberg Leadership Filtering
 
 ## Setup
 
@@ -7,12 +7,12 @@ This repo is structured as a Julia package. To activate this package, type
 julia> ]
 (@v1.6) pkg> activate .
   Activating environment at `<path to repo>/Project.toml`
-(StackelbergControlHypothesesFiltering) pkg>
+(StackelbergLeadershipFiltering) pkg>
 ```
 Now exit package mode by hitting the `[delete]` key. You should see the regular Julia REPL prompt. Type:
 ```console
 julia> using Revise
-julia> using StackelbergControlHypothesesFiltering
+julia> using StackelbergLeadershipFiltering
 ```
 
 ## Utilities
@@ -23,7 +23,7 @@ Contains useful utilities. The `Cost` struct stores matrices which define a quad
 To run tests locally and avoid polluting your commit history, in the REPL you can type:
 ```console
 julia> ]
-(StackelbergControlHypothesesFiltering) pkg> test
+(StackelbergLeadershipFiltering) pkg> test
 ```
 
 Alternatively, you can run:
