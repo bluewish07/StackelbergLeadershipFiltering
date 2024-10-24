@@ -1,5 +1,13 @@
 # Stackelberg Leadership Filtering
 
+This codebase implements the algorithms and examples from [our paper on leadership inference](https://arxiv.org/pdf/2310.18171).
+
+## Structure
+- the `src` folder contains source code files that define the core filter
+- the `example` folder contains runnable scripts for examples that were implemented
+- the `test` folder contains unit tests
+- the `derivations` folder contains pdfs describing the math behind the filter, SILQGames, and the solution to an LQ Stackelberg game
+
 ## Setup
 
 This repo is structured as a Julia package. To activate this package, type
