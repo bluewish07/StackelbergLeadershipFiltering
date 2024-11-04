@@ -28,6 +28,22 @@ function rotate_state(dyn::UnicycleDynamics, xs)
 end
 export rotate_state
 
+function plot_trajectory(dyn::LinearDynamics, times, xs; include_legend=:none, ms0=6)
+    @assert xdim(dyn) == 4
+    num_times = length(times)
+    marksize = vcat([ms0], zeros(num_times-1))
+    x₁ = xs[:, 1]
+
+    title1 = "pos. traj."
+    q1 = get_standard_plot(;include_legend)
+    plot!(title=title1, xlabel="Horizontal Position (m)", ylabel="Vertical Position (m)")
+    plot!(q1, xs[1, :], xs[3,:], linewidth=3, color=:red, marker=:circle,  markersize=marksize, markerstrokewidth=0)
+
+    q1 = scatter!([x₁[1]], [x₁[3]], color=:red)
+    return q1
+end
+export plot_trajectory
+
 # TODO(hamzah) - refactor this to be tied DoubleIntegrator Dynamics instead of Linear Dynamics.
 function plot_states_and_controls(dyn::LinearDynamics, times, xs, us; include_legend=:none, ms0=6)
     @assert num_agents(dyn) == 2
@@ -234,6 +250,23 @@ function plot_leadership_filter_positions(dyn::Dynamics, true_xs, est_xs)
     return p1
 end
 export plot_leadership_filter_positions
+
+# This function makes an x-y plot containing (1) the ground truth trajectory and
+#                                            (2) the estimated position trajectory produced by the leadership filter.
+function plot_leadership_filter_positions_shared(dyn::Dynamics, true_xs, est_xs)
+    @assert xdim(dyn) == 4
+    x₁ = true_xs[:, 1]
+
+    p1 = get_standard_plot(;columns=2, legendfontsize=18)
+    plot!(ylabel="Vertical Position (m)", xlabel="Horizontal Position (m)")
+    plot!(p1, true_xs[1, :], true_xs[3, :], label=L"Ground Truth", color=:red, linewidth=2, ls=:dash)
+    plot!(p1, est_xs[1, :], est_xs[3, :], label=L"Estimate", color=:orange)
+    # scatter!(p1, zs[x1_idx, :], zs[y1_idx, :], color=:red, marker=:plus, ms=6, markerstrokewidth=0, label=L"\mathcal{A}_1 Measurements")
+    scatter!(p1, [x₁[1]], [x₁[3]], color=:red, label="")# L"$\mathcal{A}_1$ Start")
+
+    return p1
+end
+export plot_leadership_filter_positions_shared
 
 # This function makes an x-y plot containing (1) the ground truth trajectory and
 #                                            (2) simulated measured positions of the trajectory.
