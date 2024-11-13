@@ -46,11 +46,14 @@ dyn = discretize(cont_lin_dyn, dt)
 
 
 # Generate a ground truth trajectory on which to run the leadership filter for a merging trajectory.
-u_refs, x1 = get_simple_straight_line_2D_traj()
-x_refs = unroll_raw_controls(dyn, times[1:T], u_refs, x1)
+# u_refs, x1 = get_simple_straight_line_2D_traj()
+# x_refs = unroll_raw_controls(dyn, times[1:T], u_refs, x1)
+x1, x_refs, u_refs = get_ground_truth_traj(dyn, times[1:T])
 traj_plot = plot_trajectory(dyn, times[1:T], x_refs)
 plt = plot(traj_plot, size=(800, 300))
-# display(plt)
+display(plt)
+
+return
 
 # Define the costs for the agents.
 GetCosts(dyn::Dynamics; ctrl_const=0.1) = begin

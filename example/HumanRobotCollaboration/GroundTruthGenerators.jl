@@ -23,3 +23,104 @@ function get_simple_straight_line_2D_traj()
     us = [u1, u2]
     return us, x1
 end
+
+using Symbolics
+
+function craft_control_inputs(X) #X is the state
+    K0 = 100
+    @variables x
+    f(x) = sin(x)
+    r(x) = 0.8 * sin(x) + 0.1 * sin(0.9 * x) + 0.1 * sin(0.8 * x + 0.1)
+
+    x_t = X[1]
+    y_t = X[3]
+    f_prime = Symbolics.derivative(f(x), x)
+    f_prime_val = Symbolics.substitute(f_prime, x => x_t)
+    
+    r_prime = Symbolics.derivative(r(x), x)
+    r_prime_val = Symbolics.substitute(r_prime, x => x_t)
+    
+    # u_1_x = (1/sqrt(1+f_prime_val^2) + f_prime_val*(y_t - Symbolics.substitute(f(x), x => x_t)) / (1+f_prime_val^2))/(1+distance_calculator(point, f))
+    # u_1_y = (f_prime_val/sqrt(1+f_prime_val^2) + (y_t - Symbolics.substitute(f(x), x => x_t))*(1+ 2*f_prime_val^2) / (1+f_prime_val^2))/(1+distance_calculator(point, f))
+    u_1_x = (1/sqrt(1+f_prime_val^2) + f_prime_val*(y_t - Symbolics.substitute(f(x), x => x_t)) / (1+f_prime_val^2))
+    u_1_y = (f_prime_val/sqrt(1+f_prime_val^2) + (y_t - Symbolics.substitute(f(x), x => x_t))*(1+ 2*f_prime_val^2) / (1+f_prime_val^2))
+    u_1_x = Float64(Symbolics.value(u_1_x))
+    u_1_y = Float64(Symbolics.value(u_1_y))
+    # u_2_x = (r_prime_val*(y_t - Symbolics.substitute(r(x), x => x_t)) / (1+r_prime_val^2)) * K0 / (1+distance_calculator(point, r))
+    # u_2_y = ((y_t - Symbolics.substitute(r(x), x => x_t))*(1+ 2*r_prime_val^2) / (1+r_prime_val^2)) * K0 / (1+distance_calculator(point, r))
+    u_2_x = (r_prime_val*(y_t - Symbolics.substitute(r(x), x => x_t)) / (1+r_prime_val^2)) * K0
+    u_2_y = ((y_t - Symbolics.substitute(r(x), x => x_t))*(1+ 2*r_prime_val^2) / (1+r_prime_val^2)) * K0
+    u_2_x = Float64(Symbolics.value(u_1_x))
+    u_2_y = Float64(Symbolics.value(u_1_y))
+    u_1 = vcat(u_1_x, u_1_y)
+    u_2 = vcat(u_2_x, u_2_y)
+    
+    return u_1, u_2
+end
+
+function distance_calculator(point::Tuple{Float64, Float64}, fnc)
+    #Calculates the distance from a desired point to the closest point on a function called fnc
+    x_t, y_t = point
+    f_prime = Symbolics.derivative(fnc(x), x)
+    f_prime_val = Symbolics(x).substitute(f_prime, x => x_t)
+    
+    d = (y_t - Symbolics.substitute(fnc(x), x => x_t))/(1+f_prime_val^2)
+    d = d * sqrt(f_prime_val^2+(2*f_prime_val^2+1)^2)
+    return d
+end
+
+# function unroll_dynamics(x0, x_max)
+#      x = x0
+#      init state0
+#      state = state0
+#      u1s = []
+#      u2s = []
+#      while x < x_max
+#           u1, u2 = craft_control_inputs(x)
+#           u1s.append(u1)
+#           u2s.append(u2)
+#           state = dynamics(state, u1, u2)
+#           update x 
+#      end
+# end
+
+function unroll_raw_controls_4_HRI(dyn::Dynamics, times::AbstractVector{Float64}, x₁)
+    @assert length(x₁) == xdim(dyn)
+
+    N = dyn.sys_info.num_agents
+
+    horizon = length(times)
+
+    # Populate state trajectory.
+    xs = zeros(xdim(dyn), horizon)
+    u1s = zeros(udim(dyn, 1), horizon)
+    u2s = zeros(udim(dyn, 2), horizon)
+    
+    xs[:, 1] = x₁
+    
+    u1, u2 = craft_control_inputs(xs[:,1])
+#     print("\n")
+#     print(typeof(u1))
+#     print("\n")
+#     print(size(u1))
+#     print("\n")
+#     print(size(u1s[:,1]))
+#     print("\n")
+    u1s[:, 1] = u1
+    u2s[:, 1] = u2
+    for tt in 2:horizon
+        us_prev = [u1s[:, tt-1], u2s[:, tt-1]]
+        time_range = (times[tt-1], times[tt])
+        xs[:, tt] = propagate_dynamics(dyn, time_range, xs[:, tt-1], us_prev)
+        u1, u2 = craft_control_inputs(xs[:,tt])
+        u1s[:, tt] = u1
+        u2s[:, tt] = u2
+    end
+    return xs, [u1s, u2s]
+end
+
+function get_ground_truth_traj(dyn::Dynamics, times::AbstractVector{Float64})
+     x₁ = [0;0;0;0]
+     xs, us = unroll_raw_controls_4_HRI(dyn, times, x₁)
+     return x₁, xs, us
+end
