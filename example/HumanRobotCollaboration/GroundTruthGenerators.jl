@@ -27,10 +27,10 @@ end
 using Symbolics
 
 function craft_control_inputs(X) #X is the state
-    K0 = 100
+    K0 = 1.0 #Spring constant
     @variables x
-    f(x) = sin(x)
-    r(x) = 0.8 * sin(x) + 0.1 * sin(0.9 * x) + 0.1 * sin(0.8 * x + 0.1)
+    f(x) = sin(x) #Trajectory human wants to follow
+    r(x) = 0.8 * sin(x) + 0.1 * sin(0.9 * x) + 0.1 * sin(0.8 * x) #Trajectory robot wants to follow
 
     x_t = X[1]
     y_t = X[3]
@@ -40,18 +40,17 @@ function craft_control_inputs(X) #X is the state
     r_prime = Symbolics.derivative(r(x), x)
     r_prime_val = Symbolics.substitute(r_prime, x => x_t)
     
-    # u_1_x = (1/sqrt(1+f_prime_val^2) + f_prime_val*(y_t - Symbolics.substitute(f(x), x => x_t)) / (1+f_prime_val^2))/(1+distance_calculator(point, f))
-    # u_1_y = (f_prime_val/sqrt(1+f_prime_val^2) + (y_t - Symbolics.substitute(f(x), x => x_t))*(1+ 2*f_prime_val^2) / (1+f_prime_val^2))/(1+distance_calculator(point, f))
+    
     u_1_x = (1/sqrt(1+f_prime_val^2) + f_prime_val*(y_t - Symbolics.substitute(f(x), x => x_t)) / (1+f_prime_val^2))
-    u_1_y = (f_prime_val/sqrt(1+f_prime_val^2) + (y_t - Symbolics.substitute(f(x), x => x_t))*(1+ 2*f_prime_val^2) / (1+f_prime_val^2))
-    u_1_x = Float64(Symbolics.value(u_1_x))
-    u_1_y = Float64(Symbolics.value(u_1_y))
-    # u_2_x = (r_prime_val*(y_t - Symbolics.substitute(r(x), x => x_t)) / (1+r_prime_val^2)) * K0 / (1+distance_calculator(point, r))
-    # u_2_y = ((y_t - Symbolics.substitute(r(x), x => x_t))*(1+ 2*r_prime_val^2) / (1+r_prime_val^2)) * K0 / (1+distance_calculator(point, r))
+    u_1_y = (f_prime_val/sqrt(1+f_prime_val^2) + (y_t - Symbolics.substitute(f(x), x => x_t))*(-1) / (1+f_prime_val^2))
+    u_1_x = Float64(Symbolics.value(u_1_x))/40
+    u_1_y = Float64(Symbolics.value(u_1_y))/40
+    
     u_2_x = (r_prime_val*(y_t - Symbolics.substitute(r(x), x => x_t)) / (1+r_prime_val^2)) * K0
-    u_2_y = ((y_t - Symbolics.substitute(r(x), x => x_t))*(1+ 2*r_prime_val^2) / (1+r_prime_val^2)) * K0
-    u_2_x = Float64(Symbolics.value(u_1_x))
-    u_2_y = Float64(Symbolics.value(u_1_y))
+    u_2_y = ((y_t - Symbolics.substitute(r(x), x => x_t))*(-1) / (1+r_prime_val^2)) * K0
+    u_2_x = Float64(Symbolics.value(u_2_x))
+    u_2_y = Float64(Symbolics.value(u_2_y))
+    
     u_1 = vcat(u_1_x, u_1_y)
     u_2 = vcat(u_2_x, u_2_y)
     
@@ -60,29 +59,14 @@ end
 
 function distance_calculator(point::Tuple{Float64, Float64}, fnc)
     #Calculates the distance from a desired point to the closest point on a function called fnc
+    @variables x
     x_t, y_t = point
     f_prime = Symbolics.derivative(fnc(x), x)
     f_prime_val = Symbolics(x).substitute(f_prime, x => x_t)
     
-    d = (y_t - Symbolics.substitute(fnc(x), x => x_t))/(1+f_prime_val^2)
-    d = d * sqrt(f_prime_val^2+(2*f_prime_val^2+1)^2)
+    d = sqrt(f_prime_val^2+(2*f_prime_val^2+1)^2)*(y_t - Symbolics.substitute(fnc(x), x => x_t))/(1+f_prime_val^2)
     return d
 end
-
-# function unroll_dynamics(x0, x_max)
-#      x = x0
-#      init state0
-#      state = state0
-#      u1s = []
-#      u2s = []
-#      while x < x_max
-#           u1, u2 = craft_control_inputs(x)
-#           u1s.append(u1)
-#           u2s.append(u2)
-#           state = dynamics(state, u1, u2)
-#           update x 
-#      end
-# end
 
 function unroll_raw_controls_4_HRI(dyn::Dynamics, times::AbstractVector{Float64}, x₁)
     @assert length(x₁) == xdim(dyn)
@@ -99,13 +83,6 @@ function unroll_raw_controls_4_HRI(dyn::Dynamics, times::AbstractVector{Float64}
     xs[:, 1] = x₁
     
     u1, u2 = craft_control_inputs(xs[:,1])
-#     print("\n")
-#     print(typeof(u1))
-#     print("\n")
-#     print(size(u1))
-#     print("\n")
-#     print(size(u1s[:,1]))
-#     print("\n")
     u1s[:, 1] = u1
     u2s[:, 1] = u2
     for tt in 2:horizon
