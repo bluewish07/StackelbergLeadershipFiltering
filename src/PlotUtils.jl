@@ -386,6 +386,80 @@ function plot_leadership_filter_measurement_details(dyn::Dynamics, particle_lead
 end
 export plot_leadership_filter_measurement_details
 
+function plot_leadership_filter_measurement_details_shared(dyn::Dynamics, particle_leader_idxs_t, num_particles, particle_num_iterations_t, particle_traj_xs_t, true_xs, est_xs; transform_particle_fn=(xs)->xs, t=nothing, letter=nothing, include_all_labels=false)
+    x₁ = true_xs[:, 1]
+
+    x1_idx = xidx(dyn, 1)
+    y1_idx = yidx(dyn, 1)
+    x2_idx = xidx(dyn, 2)
+    y2_idx = yidx(dyn, 2)
+
+    if include_all_labels
+        p2 = get_standard_plot(;columns=2, legendfontsize=12)
+        p1_est_label = L"$\mathcal{A}_1$ Estimate"
+        # p1_truth_label = L"$\mathcal{A}_1$ Truth"
+        p1_truth_label = "Truth"
+        p2_est_label = L"$\mathcal{A}_2$ Estimate"
+        # p2_truth_label = L"$\mathcal{A}_2$ Truth"
+        p2_truth_label = ""
+    else
+        p2 = get_standard_plot(;columns=2)
+        p1_est_label = ""
+        p1_truth_label = ""
+        p2_est_label = ""
+        p2_truth_label = ""
+        # Remove axis and grid.
+        plot!(axis=([], false), grid=true)
+    end
+    plot!(ylabel="Vertical Position (m)", xlabel="Horizontal Position (m)")
+
+    # If t is provided, annotate the plot.
+    if !isnothing(t) && !isnothing(letter)
+        plot!(ylabel="", xlabel="")
+        annotate!(p2, 1.1, 1.8, text("($(letter)) measurement model\ntime step $(t)", 30))
+    end
+
+    plot!(p2, true_xs[x1_idx, :], true_xs[y1_idx, :], color=:black, linewidth=3, label=p1_truth_label)
+    plot!(p2, est_xs[x1_idx, :], est_xs[y1_idx, :], color=:orange, label=p1_est_label)
+    scatter!(p2, [x₁[x1_idx]], [x₁[y1_idx]], color=:red, label="") # L"$\mathcal{A}_1$ Start")
+
+    plot!(p2, true_xs[x2_idx, :], true_xs[y2_idx, :], color=:black, linewidth=3, label=p2_truth_label)
+    plot!(p2, est_xs[x2_idx, :], est_xs[y2_idx, :], color=:turquoise2, label=p2_est_label)
+    scatter!(p2, [x₁[x2_idx]], [x₁[y2_idx]], color=:blue, label="") # L"$\mathcal{A}_2$ Start")
+
+    # Add particles
+    has_labeled_p1 = false
+    has_labeled_p2 = false
+    for n in 1:num_particles
+
+        num_iter = particle_num_iterations_t[n]
+        xks = transform_particle_fn(particle_traj_xs_t[n, :, :])
+
+        # TODO(hamzah) - change color based on which agent is leader
+        does_p1_lead = (particle_leader_idxs_t[n] == 1)
+
+        color = (does_p1_lead) ? "red" : "blue"
+        label_1 = (!has_labeled_p1 && does_p1_lead) ? L"$\mathcal{A}_1$ Measurement Model" : ""
+        label_2 = (!has_labeled_p2 && !does_p1_lead) ? L"$\mathcal{A}_2$ Measurement Model" : ""
+
+        if label_1 != ""
+            has_labeled_p1 = true
+        end
+        if label_2 != ""
+            has_labeled_p2 = true
+        end
+
+        scatter!(p2, xks[x1_idx, :], xks[y1_idx, :], color=color, markersize=1., markerstrokewidth=0, label="")
+        scatter!(p2, [xks[x1_idx, 2]], [xks[y1_idx, 2]], color=color, markersize=3., markerstrokewidth=0, label=label_1)
+
+        scatter!(p2, xks[x2_idx, :], xks[y2_idx, :], color=color, markersize=1., markerstrokewidth=0, label="")
+        scatter!(p2, [xks[x2_idx, 2]], [xks[y2_idx, 2]], color=color, markersize=3., markerstrokewidth=0, label=label_2)
+    end
+
+    return p2
+end
+export plot_leadership_filter_measurement_details_shared
+
 # This function generates two probability plots (both lines on one plot is too much to see), one for the probablity of
 # each agent as leader. Plot both by default.
 function make_probability_plots(times, probs; player_to_plot=nothing, t_idx=nothing, include_gt=nothing, stddevs=nothing)

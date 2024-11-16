@@ -10,15 +10,17 @@ function combine_cost_funcs(funcs, weights)
     return g
 end
 
-function create_HRC_costs(T; goal_pos_x = 14) 
+function create_HRC_costs(T, goal_pos_x ) 
     # given human desired traj function
     # y = h1(x), x, y are scalars
     h1(x) = begin
-        return 0.1*x
+        return sin(x)
+        # return 0.5*x
     end
     # closed form derivative of h1
     h1_prime(x) = begin
-        return 0.1
+        return cos(x)
+        # return 0.5
     end
     traj_deviation_cost_human_fn(si, x, us, t) = begin
         h1_x = h1(x[1])
@@ -33,11 +35,13 @@ function create_HRC_costs(T; goal_pos_x = 14)
     # given robot desired traj function
     # y = h2(x), x, y are scalars
     h2(x) = begin
-        return 0
+        return 0.8 * sin(x) + 0.1 * sin(0.9 * x) + 0.1 * sin(0.8 * x)
+        # return 0
     end
     # closed form derivative of h2
     h2_prime(x) = begin
-        return 0
+        return 0.8*cos(x) + 0.1*0.9*cos(0.9*x) + 0.1*0.8*cos(0.8*x)
+        # return 0
     end
     traj_deviation_cost_robot_fn(si, x, us, t) = begin
         h2_x = h2(x[1])
@@ -51,14 +55,14 @@ function create_HRC_costs(T; goal_pos_x = 14)
     c1_traj = PlayerCost(traj_deviation_cost_human_fn, si)
     c2_traj = PlayerCost(traj_deviation_cost_robot_fn, si)
 
-    ctrl_const = 0.1
+    ctrl_const = 2
     c1_control = QuadraticCost(zeros(4, 4))
-    add_control_cost!(c1_control, 1, ctrl_const * diagm([1, 1]))
+    add_control_cost!(c1_control, 1, ctrl_const * diagm([0.5, 1]))
     add_control_cost!(c1_control, 2, zeros(2, 2)) # human doesn't care about robot's control cost
 
     c2_control = QuadraticCost(zeros(4, 4))
-    add_control_cost!(c2_control, 1, ctrl_const * diagm([1, 1])) # robot should care about not making human pay too much control cost
-    add_control_cost!(c2_control, 2, ctrl_const * diagm([1, 1]))
+    add_control_cost!(c2_control, 1, ctrl_const * diagm([0, 1])) # robot should care about not making human pay too much control cost
+    add_control_cost!(c2_control, 2, ctrl_const * diagm([0.5, 0.5]))
 
     costs_p1 = [c1_traj, c1_control]
     weights_p1 = ones(length(costs_p1))

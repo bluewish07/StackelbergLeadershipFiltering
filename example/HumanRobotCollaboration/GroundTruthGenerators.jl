@@ -26,11 +26,13 @@ end
 
 using Symbolics
 
-function craft_control_inputs(X) #X is the state
+function craft_control_inputs(X, u1_scaling) #X is the state
     K0 = 1.0 #Spring constant
     @variables x
     f(x) = sin(x) #Trajectory human wants to follow
     r(x) = 0.8 * sin(x) + 0.1 * sin(0.9 * x) + 0.1 * sin(0.8 * x) #Trajectory robot wants to follow
+    # f(x) = 0.3*x
+    # r(x) = 0
 
     x_t = X[1]
     y_t = X[3]
@@ -43,8 +45,8 @@ function craft_control_inputs(X) #X is the state
     
     u_1_x = (1/sqrt(1+f_prime_val^2) + f_prime_val*(y_t - Symbolics.substitute(f(x), x => x_t)) / (1+f_prime_val^2))
     u_1_y = (f_prime_val/sqrt(1+f_prime_val^2) + (y_t - Symbolics.substitute(f(x), x => x_t))*(-1) / (1+f_prime_val^2))
-    u_1_x = Float64(Symbolics.value(u_1_x))/40
-    u_1_y = Float64(Symbolics.value(u_1_y))/40
+    u_1_x = Float64(Symbolics.value(u_1_x))/40 / u1_scaling
+    u_1_y = Float64(Symbolics.value(u_1_y))/40 * u1_scaling
     
     u_2_x = (r_prime_val*(y_t - Symbolics.substitute(r(x), x => x_t)) / (1+r_prime_val^2)) * K0
     u_2_y = ((y_t - Symbolics.substitute(r(x), x => x_t))*(-1) / (1+r_prime_val^2)) * K0
@@ -82,14 +84,14 @@ function unroll_raw_controls_4_HRI(dyn::Dynamics, times::AbstractVector{Float64}
     
     xs[:, 1] = x₁
     
-    u1, u2 = craft_control_inputs(xs[:,1])
+    u1, u2 = craft_control_inputs(xs[:,1], 1)
     u1s[:, 1] = u1
     u2s[:, 1] = u2
     for tt in 2:horizon
         us_prev = [u1s[:, tt-1], u2s[:, tt-1]]
         time_range = (times[tt-1], times[tt])
         xs[:, tt] = propagate_dynamics(dyn, time_range, xs[:, tt-1], us_prev)
-        u1, u2 = craft_control_inputs(xs[:,tt])
+        u1, u2 = tt < horizon/2 ?  craft_control_inputs(xs[:,tt], 1) : craft_control_inputs(xs[:,tt], 5)
         u1s[:, tt] = u1
         u2s[:, tt] = u2
     end

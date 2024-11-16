@@ -18,7 +18,7 @@ include("CreateHRCGame.jl")
 # Define game and timing related configuration.
 num_players = 2
 
-T = 101
+T = 501
 t0 = 0.0
 dt = 0.05
 horizon = T * dt
@@ -55,7 +55,6 @@ traj_plot = plot_trajectory(dyn, times[1:T], x_refs)
 plt = plot(traj_plot, size=(800, 300))
 display(plt)
 
-return
 
 # Define simple quadratic costs for the agents.
 GetCosts(dyn::Dynamics; ctrl_const=0.1) = begin
@@ -78,8 +77,8 @@ GetCosts(dyn::Dynamics; ctrl_const=0.1) = begin
     return [C1, C2]
 end
 
-costs = GetCosts(dyn)
-# costs = create_HRC_costs(T)
+# costs = GetCosts(dyn)
+costs = create_HRC_costs(T, x_refs[1, T])
 
 
 # Run the leadership filter.
@@ -158,7 +157,8 @@ x̂s, P̂s, probs, pf, sg_objs, iter_timings = leadership_filter(dyn, costs, t0,
                            max_iters=max_iters,
                            step_size=step_size,
                            Ns=num_particles,
-                           verbose=true)
+                           verbose=true,
+                           ensure_pd=false)
 
 using Dates
 gr()
@@ -178,5 +178,15 @@ savefig(prob_plot, prob_filepath)
 p1a = plot_leadership_filter_positions_shared(dyn, true_xs[:, 1:T], x̂s[:, 1:T])
 pos_main_filepath = joinpath(folder_name, "LF_merging_scenario_main.pdf")
 savefig(p1a, pos_main_filepath)
+
+# iter1 = ProgressBar(2:snapshot_freq:T)
+# ii = 1
+# for t in iter1
+#     p1b = plot_leadership_filter_measurement_details(num_particles, sg_objs[t], true_xs[:, 1:T], x̂s; include_all_labels=true)
+#     pos2_filepath = joinpath(folder_name, "0$(ii)_LF_merging_scenario_positions_detail.pdf")
+#     savefig(p1b, pos2_filepath)
+#     ii +=1
+# end
+
 
 # make_merging_scenario_pdf_plots(folder_name, snapshot_freq, cfg, limits, sg_objs[1].dyn, T, times, true_xs, true_us, probs, x̂s, zs, num_particles)
