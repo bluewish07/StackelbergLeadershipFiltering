@@ -8,6 +8,7 @@ using Random: MersenneTwister
 using Distributions: Bernoulli, MvNormal
 
 include("GroundTruthGenerators.jl")
+include("CreateHRCGame.jl")
 
 # Two player dynamics
 # Dynamics (Euler-discretized double integrator equations with Δt = 0.1s).
@@ -43,6 +44,7 @@ B2() = [0   0;
         0   1]
 cont_lin_dyn = ContinuousLinearDynamics(A(), [B1(), B2()])
 dyn = discretize(cont_lin_dyn, dt)
+si = dyn.sys_info
 
 
 # Generate a ground truth trajectory on which to run the leadership filter for a merging trajectory.
@@ -55,7 +57,7 @@ display(plt)
 
 return
 
-# Define the costs for the agents.
+# Define simple quadratic costs for the agents.
 GetCosts(dyn::Dynamics; ctrl_const=0.1) = begin
     Q1 = zeros(4, 4)
     Q1[1, 1] = 0.0001
@@ -75,6 +77,9 @@ GetCosts(dyn::Dynamics; ctrl_const=0.1) = begin
 
     return [C1, C2]
 end
+
+costs = GetCosts(dyn)
+# costs = create_HRC_costs(T)
 
 
 # Run the leadership filter.
@@ -135,7 +140,7 @@ threshold = 1e-2
 max_iters = 100
 step_size = 1e-2
 
-x̂s, P̂s, probs, pf, sg_objs, iter_timings = leadership_filter(dyn, GetCosts(dyn), t0, times,
+x̂s, P̂s, probs, pf, sg_objs, iter_timings = leadership_filter(dyn, costs, t0, times,
                            T,         # simulation horizon
                            Ts,        # horizon over which the stackelberg game should be played,
                            num_games, # number of stackelberg games played for measurement

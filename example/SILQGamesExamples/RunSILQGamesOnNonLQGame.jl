@@ -29,7 +29,6 @@ println("final: ", xs_k[:, T], " with trajectory costs: ", final_cost_totals)
 println(size(xs_k), " ", size(us_k[1]), " ", size(us_k[2]))
 
 
-using ElectronDisplay
 using Plots
 
 q1, q2, q3, q4, q5, q6, q7 = plot_states_and_controls(dyn, times, xs_k, us_k)

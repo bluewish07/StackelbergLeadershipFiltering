@@ -24,7 +24,6 @@ println("final: ", xs_k[:, T], " with trajectory costs: ", final_cost_totals)
 println(size(xs_k), " ", size(us_k[1]), " ", size(us_k[2]))
 
 
-using ElectronDisplay
 using Plots
 
 # Plot positions, other two states, controls, and convergence.

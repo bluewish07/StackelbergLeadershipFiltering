@@ -40,7 +40,6 @@ xs_nash_feedback, us_nash_feedback, xs_stackelberg_feedback, us_stackelberg_feed
 horizon = last(size(xs_nash_feedback))
 
 # Plot.
-using ElectronDisplay
 using Plots
 
 p = plot(legend=:outertopright)

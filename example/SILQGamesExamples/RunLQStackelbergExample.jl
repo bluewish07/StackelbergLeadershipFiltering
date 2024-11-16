@@ -13,7 +13,6 @@ println("final: ", xs[:, T], " with trajectory costs: ", final_cost_totals, " su
 println(size(xs), " ", size(us[1]), " ", size(us[2]))
 
 
-using ElectronDisplay
 
 # Plot positions, other two states, controls, and convergence.
 q = @layout [a b; c d ;e f; g h]
