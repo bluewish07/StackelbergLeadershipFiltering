@@ -18,9 +18,9 @@ include("CreateHRCGame.jl")
 # Define game and timing related configuration.
 num_players = 2
 
-T = 501
+T = 101
 t0 = 0.0
-dt = 0.05
+dt = 0.1
 horizon = T * dt
 times = dt * cumsum(ones(2*T)) .- dt
 

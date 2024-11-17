@@ -27,36 +27,52 @@ end
 using Symbolics
 
 function craft_control_inputs(X, u1_scaling) #X is the state
-    K0 = 1.0 #Spring constant
+    
     @variables x
-    f(x) = sin(x) #Trajectory human wants to follow
-    r(x) = 0.8*(0.8 * sin(x) + 0.1 * sin(0.9 * x) + 0.1 * sin(0.8 * x)) #Trajectory robot wants to follow
+    # f(x) = sin(x) #Trajectory human wants to follow
+    # r(x) = 0.8*(0.8 * sin(x) + 0.1 * sin(0.9 * x) + 0.1 * sin(0.8 * x)) #Trajectory robot wants to follow
     # f(x) = 0.3*x
     # r(x) = 0
+    e = 2.7182
+    f(x) = 0.1*x + 2*e^(-(x/0.5-4)^2)
+    r(x) = 0.1*x  
+    damping_ratio = 0.0
+    K0 = 0.1 #Spring constant
+    u1_scaling = 10.0
 
     x_t = X[1]
+    x_dot_t = X[2]
     y_t = X[3]
+    y_dot_t = X[4]
+
+
     f_prime = Symbolics.derivative(f(x), x)
     f_prime_val = Symbolics.substitute(f_prime, x => x_t)
     
     r_prime = Symbolics.derivative(r(x), x)
     r_prime_val = Symbolics.substitute(r_prime, x => x_t)
     
-    u_1_x_t = 1/sqrt(1+f_prime_val^2)
-    u_1_x_n = f_prime_val*(y_t - Symbolics.substitute(f(x), x => x_t)) / (1+f_prime_val^2)
-    u_1_x = u_1_x_t + u_1_x_n
 
-    u_1_y_t = f_prime_val/sqrt(1+f_prime_val^2) 
+    u_1_x_n = f_prime_val*(y_t - Symbolics.substitute(f(x), x => x_t)) / (1+f_prime_val^2) 
     u_1_y_n = (y_t - Symbolics.substitute(f(x), x => x_t))*(-1) / (1+f_prime_val^2)
-    u_1_y = u_1_y_t + u_1_y_n
-
-    u_1_x = Float64(Symbolics.value(u_1_x))/40 / u1_scaling
-    u_1_y = Float64(Symbolics.value(u_1_y))/40 * u1_scaling
+    velocity_projection = u_1_x_n*x_dot_t + u_1_y_n*y_dot_t
+    u_1_x_n = Float64(Symbolics.value(u_1_x_n - velocity_projection*x_dot_t*damping_ratio))
+    u_1_y_n = Float64(Symbolics.value(u_1_x_n - velocity_projection*y_dot_t*damping_ratio))
+    
+    u_1_x_t = Float64(Symbolics.value(1/sqrt(1+f_prime_val^2)))
+    u_1_y_t = Float64(Symbolics.value(f_prime_val/sqrt(1+f_prime_val^2)))
+    
+    u_1_x = (u_1_x_t + u_1_x_n*2)/u1_scaling 
+    u_1_y = (u_1_y_t + u_1_y_n*2)/u1_scaling 
 
 
     #u2 is generating force only in the normal direction to r(x)
-    u_2_x = (r_prime_val*(y_t - Symbolics.substitute(r(x), x => x_t)) / (1+r_prime_val^2)) * K0
-    u_2_y = ((y_t - Symbolics.substitute(r(x), x => x_t))*(-1) / (1+r_prime_val^2)) * K0
+    
+    u_2_x = (r_prime_val*(y_t - Symbolics.substitute(r(x), x => x_t)) / (1+r_prime_val^2)) 
+    u_2_y = ((y_t - Symbolics.substitute(r(x), x => x_t))*(-1) / (1+r_prime_val^2)) 
+    velocity_projection = u_2_x*x_dot_t + u_2_y*y_dot_t
+    u_2_x = K0 * (u_2_x - velocity_projection*damping_ratio*x_dot_t)
+    u_2_y = K0 * (u_2_y - velocity_projection*damping_ratio*y_dot_t)
 
     u_2_x = Float64(Symbolics.value(u_2_x))
     u_2_y = Float64(Symbolics.value(u_2_y))

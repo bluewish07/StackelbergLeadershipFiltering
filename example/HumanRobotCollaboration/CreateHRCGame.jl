@@ -14,12 +14,12 @@ function create_HRC_costs(T, goal_pos_x )
     # given human desired traj function
     # y = h1(x), x, y are scalars
     h1(x) = begin
-        return sin(x)
+        return 0.1*x + 2*2.7182^(-(x/0.5-4)^2) #sin(x)
         # return 0.5*x
     end
     # closed form derivative of h1
     h1_prime(x) = begin
-        return cos(x)
+        return 0.1 - (16*x-32)-2.7182^(-(4-2*x)^2)
         # return 0.5
     end
     traj_deviation_cost_human_fn(si, x, us, t) = begin
@@ -35,12 +35,12 @@ function create_HRC_costs(T, goal_pos_x )
     # given robot desired traj function
     # y = h2(x), x, y are scalars
     h2(x) = begin
-        return 0.8 * sin(x) + 0.1 * sin(0.9 * x) + 0.1 * sin(0.8 * x)
+        return 0.1*x #0.8 * sin(x) + 0.1 * sin(0.9 * x) + 0.1 * sin(0.8 * x)
         # return 0
     end
     # closed form derivative of h2
     h2_prime(x) = begin
-        return 0.8*cos(x) + 0.1*0.9*cos(0.9*x) + 0.1*0.8*cos(0.8*x)
+        return 0.1 #0.8*cos(x) + 0.1*0.9*cos(0.9*x) + 0.1*0.8*cos(0.8*x)
         # return 0
     end
     traj_deviation_cost_robot_fn(si, x, us, t) = begin
