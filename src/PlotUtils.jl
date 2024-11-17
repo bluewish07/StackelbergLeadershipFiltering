@@ -28,18 +28,22 @@ function rotate_state(dyn::UnicycleDynamics, xs)
 end
 export rotate_state
 
-function plot_trajectory(dyn::LinearDynamics, times, xs; include_legend=:none, ms0=6)
+function plot_trajectory(dyn::LinearDynamics, times, xs, h, r; include_legend=:none, ms0=6)
     @assert xdim(dyn) == 4
     num_times = length(times)
     marksize = vcat([ms0], zeros(num_times-1))
     x₁ = xs[:, 1]
+    hs = [h(s) for s in xs[1, :]]
+    rs = [r(s) for s in xs[1, :]]
 
     title1 = "pos. traj."
     q1 = get_standard_plot(;include_legend)
     plot!(title=title1, xlabel="Horizontal Position (m)", ylabel="Vertical Position (m)")
-    plot!(q1, xs[1, :], xs[3,:], linewidth=3, color=:red, marker=:circle,  markersize=marksize, markerstrokewidth=0)
+    plot!(q1, xs[1, :], xs[3,:], linewidth=3, color=:black, marker=:circle,  markersize=marksize, markerstrokewidth=0)
+    plot!(q1, xs[1, :], hs, linewidth=3, color=:red, marker=:circle,  markersize=marksize, markerstrokewidth=0)
+    plot!(q1, xs[1, :], rs, linewidth=3, color=:blue, marker=:circle,  markersize=marksize, markerstrokewidth=0)
 
-    q1 = scatter!([x₁[1]], [x₁[3]], color=:red)
+    q1 = scatter!([xs[1, Int64(floor(num_times/2))]], [xs[3, Int64(floor(num_times/2))]], color=:black)
     return q1
 end
 export plot_trajectory
@@ -386,13 +390,12 @@ function plot_leadership_filter_measurement_details(dyn::Dynamics, particle_lead
 end
 export plot_leadership_filter_measurement_details
 
+function plot_leadership_filter_measurement_details_shared(num_particles, sg_t::SILQGamesObject, true_xs, est_xs; transform_particle_fn=(xs)->xs, include_all_labels=false)
+    plot_leadership_filter_measurement_details_shared(sg_t.dyn, sg_t.leader_idxs, num_particles, sg_t.num_iterations, sg_t.xks, true_xs, est_xs; transform_particle_fn=transform_particle_fn, include_all_labels=include_all_labels)
+end
+
 function plot_leadership_filter_measurement_details_shared(dyn::Dynamics, particle_leader_idxs_t, num_particles, particle_num_iterations_t, particle_traj_xs_t, true_xs, est_xs; transform_particle_fn=(xs)->xs, t=nothing, letter=nothing, include_all_labels=false)
     x₁ = true_xs[:, 1]
-
-    x1_idx = xidx(dyn, 1)
-    y1_idx = yidx(dyn, 1)
-    x2_idx = xidx(dyn, 2)
-    y2_idx = yidx(dyn, 2)
 
     if include_all_labels
         p2 = get_standard_plot(;columns=2, legendfontsize=12)
@@ -419,13 +422,9 @@ function plot_leadership_filter_measurement_details_shared(dyn::Dynamics, partic
         annotate!(p2, 1.1, 1.8, text("($(letter)) measurement model\ntime step $(t)", 30))
     end
 
-    plot!(p2, true_xs[x1_idx, :], true_xs[y1_idx, :], color=:black, linewidth=3, label=p1_truth_label)
-    plot!(p2, est_xs[x1_idx, :], est_xs[y1_idx, :], color=:orange, label=p1_est_label)
-    scatter!(p2, [x₁[x1_idx]], [x₁[y1_idx]], color=:red, label="") # L"$\mathcal{A}_1$ Start")
-
-    plot!(p2, true_xs[x2_idx, :], true_xs[y2_idx, :], color=:black, linewidth=3, label=p2_truth_label)
-    plot!(p2, est_xs[x2_idx, :], est_xs[y2_idx, :], color=:turquoise2, label=p2_est_label)
-    scatter!(p2, [x₁[x2_idx]], [x₁[y2_idx]], color=:blue, label="") # L"$\mathcal{A}_2$ Start")
+    plot!(p2, true_xs[1, :], true_xs[3, :], color=:black, linewidth=3, label=p1_truth_label)
+    plot!(p2, est_xs[1, :], est_xs[3, :], color=:orange, label=p1_est_label)
+    scatter!(p2, [x₁[1]], [x₁[3]], color=:red, label="") # L"$\mathcal{A}_1$ Start")
 
     # Add particles
     has_labeled_p1 = false
@@ -449,11 +448,8 @@ function plot_leadership_filter_measurement_details_shared(dyn::Dynamics, partic
             has_labeled_p2 = true
         end
 
-        scatter!(p2, xks[x1_idx, :], xks[y1_idx, :], color=color, markersize=1., markerstrokewidth=0, label="")
-        scatter!(p2, [xks[x1_idx, 2]], [xks[y1_idx, 2]], color=color, markersize=3., markerstrokewidth=0, label=label_1)
-
-        scatter!(p2, xks[x2_idx, :], xks[y2_idx, :], color=color, markersize=1., markerstrokewidth=0, label="")
-        scatter!(p2, [xks[x2_idx, 2]], [xks[y2_idx, 2]], color=color, markersize=3., markerstrokewidth=0, label=label_2)
+        scatter!(p2, xks[1, :], xks[3, :], color=color, markersize=1., markerstrokewidth=0, label="")
+        scatter!(p2, [xks[1, 2]], [xks[3, 2]], color=color, markersize=3., markerstrokewidth=0, label=label_1)
     end
 
     return p2

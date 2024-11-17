@@ -18,7 +18,7 @@ include("CreateHRCGame.jl")
 # Define game and timing related configuration.
 num_players = 2
 
-T = 501
+T = 121
 t0 = 0.0
 dt = 0.05
 horizon = T * dt
@@ -50,8 +50,13 @@ si = dyn.sys_info
 # Generate a ground truth trajectory on which to run the leadership filter for a merging trajectory.
 # u_refs, x1 = get_simple_straight_line_2D_traj()
 # x_refs = unroll_raw_controls(dyn, times[1:T], u_refs, x1)
-x1, x_refs, u_refs = get_ground_truth_traj(dyn, times[1:T])
-traj_plot = plot_trajectory(dyn, times[1:T], x_refs)
+k = 5
+h(x) = 3*x/(k+x) + exp(x-k)/(1+exp(x-k)) #Trajectory human wants to follow
+r(x) = 3*x/(k+x) #Trajectory robot wants to follow
+h_prime(x) = 3*k/(k+x)^2
+r_prime(x) = 3*k/(k+x)^2 + exp(x-k)/(1+exp(x-k))^2
+x1, x_refs, u_refs = get_ground_truth_traj(dyn, times[1:T], h, r)
+traj_plot = plot_trajectory(dyn, times[1:T], x_refs, h, r)
 plt = plot(traj_plot, size=(800, 300))
 display(plt)
 
@@ -78,7 +83,7 @@ GetCosts(dyn::Dynamics; ctrl_const=0.1) = begin
 end
 
 # costs = GetCosts(dyn)
-costs = create_HRC_costs(T, x_refs[1, T])
+costs = create_HRC_costs(T, x_refs[1, T], h, r, h_prime, r_prime)
 
 
 # Run the leadership filter.
@@ -179,14 +184,14 @@ p1a = plot_leadership_filter_positions_shared(dyn, true_xs[:, 1:T], x̂s[:, 1:T]
 pos_main_filepath = joinpath(folder_name, "LF_merging_scenario_main.pdf")
 savefig(p1a, pos_main_filepath)
 
-# iter1 = ProgressBar(2:snapshot_freq:T)
-# ii = 1
-# for t in iter1
-#     p1b = plot_leadership_filter_measurement_details(num_particles, sg_objs[t], true_xs[:, 1:T], x̂s; include_all_labels=true)
-#     pos2_filepath = joinpath(folder_name, "0$(ii)_LF_merging_scenario_positions_detail.pdf")
-#     savefig(p1b, pos2_filepath)
-#     ii +=1
-# end
+iter1 = ProgressBar(2:snapshot_freq:T)
+global p_i = 1
+for t in iter1
+    p1b = plot_leadership_filter_measurement_details_shared(num_particles, sg_objs[t], true_xs[:, 1:T], x̂s; include_all_labels=true)
+    pos2_filepath = joinpath(folder_name, "0$(p_i)_LF_merging_scenario_positions_detail.pdf")
+    savefig(p1b, pos2_filepath)
+    global p_i += 1
+end
 
 
 # make_merging_scenario_pdf_plots(folder_name, snapshot_freq, cfg, limits, sg_objs[1].dyn, T, times, true_xs, true_us, probs, x̂s, zs, num_particles)

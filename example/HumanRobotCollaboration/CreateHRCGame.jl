@@ -1,3 +1,5 @@
+using Symbolics
+
 function combine_cost_funcs(funcs, weights)
     @assert size(funcs) == size(weights)
 
@@ -10,59 +12,60 @@ function combine_cost_funcs(funcs, weights)
     return g
 end
 
-function create_HRC_costs(T, goal_pos_x ) 
+function create_HRC_costs(T, goal_pos_x, h, r, h_prime, r_prime) 
     # given human desired traj function
-    # y = h1(x), x, y are scalars
-    h1(x) = begin
-        return sin(x)
-        # return 0.5*x
-    end
-    # closed form derivative of h1
-    h1_prime(x) = begin
-        return cos(x)
-        # return 0.5
-    end
+    # y = h(x), x, y are scalars
+    # @variables x_sym
+    # h_prime_sym = Symbolics.derivative(h(x_sym), x_sym)
+    # h_prime(x_t) = begin
+    #     h_prime_val = Symbolics.value(Symbolics.substitute(h_prime_sym, x_sym => x_t))
+    #     return h_prime_val
+    # end
+
     traj_deviation_cost_human_fn(si, x, us, t) = begin
-        h1_x = h1(x[1])
-        h1p_x = h1_prime(x[1]) 
-        x_diff = h1p_x * (x[3] - h1_x) / (1 + h1p_x^2)
-        y_bar = h1_x + h1p_x^2 * (x[3] - h1_x) / (1 + h1p_x^2)
+        h_x = h(x[1])
+        hp_x = h_prime(x[1]) 
+        x_diff = hp_x * (x[3] - h_x) / (1 + hp_x^2)
+        y_bar = h_x + hp_x^2 * (x[3] - h_x) / (1 + hp_x^2)
         y_diff = y_bar - x[2]
         dist_to_goal = (x[1]-goal_pos_x)^2
-        return x_diff^2 + y_diff^2 + 0.01 / T * dist_to_goal
+        speed_multiplier = norm([[x[2], x[4]]])
+        # cost = ((x_diff^2 + y_diff^2)*speed_multiplier + 0.01 / T * dist_to_goal) 
+        cost = abs(h_x - x[3])^2*speed_multiplier + 0.01 / T * dist_to_goal
+        # println(cost)
+        return cost
     end
 
     # given robot desired traj function
-    # y = h2(x), x, y are scalars
-    h2(x) = begin
-        return 0.8 * sin(x) + 0.1 * sin(0.9 * x) + 0.1 * sin(0.8 * x)
-        # return 0
-    end
-    # closed form derivative of h2
-    h2_prime(x) = begin
-        return 0.8*cos(x) + 0.1*0.9*cos(0.9*x) + 0.1*0.8*cos(0.8*x)
-        # return 0
-    end
+    # y = r(x), x, y are scalars
+    # r_prime_sym = Symbolics.derivative(r(x_sym), x_sym)
+    # r_prime(x_t) = begin
+    #     r_prime_val = Symbolics.value(Symbolics.substitute(r_prime_sym, x_sym => x_t))
+    #     return r_prime_val
+    # end
     traj_deviation_cost_robot_fn(si, x, us, t) = begin
-        h2_x = h2(x[1])
-        h2p_x = h2_prime(x[1]) 
-        x_diff = h2p_x * (x[3] - h2_x) / (1 + h2p_x^2)
-        y_bar = h2_x + h2p_x^2 * (x[3] - h2_x) / (1 + h2p_x^2)
+        r_x = r(x[1])
+        rp_x = r_prime(x[1]) 
+        x_diff = rp_x * (x[3] - r_x) / (1 + rp_x^2)
+        y_bar = r_x + rp_x^2 * (x[3] - r_x) / (1 + rp_x^2)
         y_diff = y_bar - x[3]
-        return x_diff^2 + y_diff^2
+        # cost = (x_diff^2 + y_diff^2) 
+        cost = abs(r_x - x[3])^2
+        # println(cost)
+        return cost
     end
 
     c1_traj = PlayerCost(traj_deviation_cost_human_fn, si)
     c2_traj = PlayerCost(traj_deviation_cost_robot_fn, si)
 
-    ctrl_const = 2
+    ctrl_const = 0.2
     c1_control = QuadraticCost(zeros(4, 4))
-    add_control_cost!(c1_control, 1, ctrl_const * diagm([0.5, 1]))
+    add_control_cost!(c1_control, 1, ctrl_const * diagm([2, 2]))
     add_control_cost!(c1_control, 2, zeros(2, 2)) # human doesn't care about robot's control cost
 
     c2_control = QuadraticCost(zeros(4, 4))
-    add_control_cost!(c2_control, 1, ctrl_const * diagm([0, 1])) # robot should care about not making human pay too much control cost
-    add_control_cost!(c2_control, 2, ctrl_const * diagm([0.5, 0.5]))
+    add_control_cost!(c2_control, 1, ctrl_const * diagm([2, 2])) # robot should care about not making human pay too much control cost
+    add_control_cost!(c2_control, 2, ctrl_const * diagm([1, 1]))
 
     costs_p1 = [c1_traj, c1_control]
     weights_p1 = ones(length(costs_p1))
