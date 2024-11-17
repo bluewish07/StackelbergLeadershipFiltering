@@ -390,11 +390,11 @@ function plot_leadership_filter_measurement_details(dyn::Dynamics, particle_lead
 end
 export plot_leadership_filter_measurement_details
 
-function plot_leadership_filter_measurement_details_shared(num_particles, sg_t::SILQGamesObject, true_xs, est_xs; transform_particle_fn=(xs)->xs, include_all_labels=false)
-    plot_leadership_filter_measurement_details_shared(sg_t.dyn, sg_t.leader_idxs, num_particles, sg_t.num_iterations, sg_t.xks, true_xs, est_xs; transform_particle_fn=transform_particle_fn, include_all_labels=include_all_labels)
+function plot_leadership_filter_measurement_details_shared(num_particles, sg_t::SILQGamesObject, true_xs, est_xs; transform_particle_fn=(xs)->xs, include_all_labels=false, t=nothing)
+    plot_leadership_filter_measurement_details_shared(sg_t.dyn, sg_t.leader_idxs, num_particles, sg_t.num_iterations, sg_t.xks, true_xs, est_xs; transform_particle_fn=transform_particle_fn, include_all_labels=include_all_labels, t=t)
 end
 
-function plot_leadership_filter_measurement_details_shared(dyn::Dynamics, particle_leader_idxs_t, num_particles, particle_num_iterations_t, particle_traj_xs_t, true_xs, est_xs; transform_particle_fn=(xs)->xs, t=nothing, letter=nothing, include_all_labels=false)
+function plot_leadership_filter_measurement_details_shared(dyn::Dynamics, particle_leader_idxs_t, num_particles, particle_num_iterations_t, particle_traj_xs_t, true_xs, est_xs; transform_particle_fn=(xs)->xs, t=nothing, include_all_labels=false)
     x₁ = true_xs[:, 1]
 
     if include_all_labels
@@ -417,9 +417,8 @@ function plot_leadership_filter_measurement_details_shared(dyn::Dynamics, partic
     plot!(ylabel="Vertical Position (m)", xlabel="Horizontal Position (m)")
 
     # If t is provided, annotate the plot.
-    if !isnothing(t) && !isnothing(letter)
-        plot!(ylabel="", xlabel="")
-        annotate!(p2, 1.1, 1.8, text("($(letter)) measurement model\ntime step $(t)", 30))
+    if !isnothing(t) 
+        annotate!(p2, 1.1, 1.8, text("time step $(t)", 30))
     end
 
     plot!(p2, true_xs[1, :], true_xs[3, :], color=:black, linewidth=3, label=p1_truth_label)
@@ -460,6 +459,7 @@ export plot_leadership_filter_measurement_details_shared
 # each agent as leader. Plot both by default.
 function make_probability_plots(times, probs; player_to_plot=nothing, t_idx=nothing, include_gt=nothing, stddevs=nothing)
     T = length(times)
+    times = 1:T
     lower_p1, upper_p1 = (isnothing(stddevs)) ? (zeros(T), zeros(T)) : stddevs
 
     # probability plot for P1 - plot 5

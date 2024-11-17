@@ -97,7 +97,7 @@ function craft_control_inputs(X, h, r, ref_speed, h_scaling) #X is the state
     u_1_x = Float64(Symbolics.value(u_1[1]))
     u_1_y = Float64(Symbolics.value(u_1[2])) 
     u_1 = vcat(u_1_x, u_1_y*h_scaling)
-    println(u_1)
+    # println(u_1)
 
 
     #u2 is generating force only in the normal direction to r(x)

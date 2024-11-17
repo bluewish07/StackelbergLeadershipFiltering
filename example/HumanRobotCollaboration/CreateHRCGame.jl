@@ -31,7 +31,7 @@ function create_HRC_costs(T, goal_pos_x, h, r, h_prime, r_prime)
         dist_to_goal = (x[1]-goal_pos_x)^2
         speed_multiplier = norm([[x[2], x[4]]])
         # cost = ((x_diff^2 + y_diff^2)*speed_multiplier + 0.01 / T * dist_to_goal) 
-        cost = abs(h_x - x[3])^2*speed_multiplier + 0.01 / T * dist_to_goal
+        cost = abs(h_x - x[3])^2*speed_multiplier + 0.005 / T * dist_to_goal
         # println(cost)
         return cost
     end
@@ -60,7 +60,7 @@ function create_HRC_costs(T, goal_pos_x, h, r, h_prime, r_prime)
 
     ctrl_const = 0.2
     c1_control = QuadraticCost(zeros(4, 4))
-    add_control_cost!(c1_control, 1, ctrl_const * diagm([2, 2]))
+    add_control_cost!(c1_control, 1, ctrl_const * diagm([1, 1]))
     add_control_cost!(c1_control, 2, zeros(2, 2)) # human doesn't care about robot's control cost
 
     c2_control = QuadraticCost(zeros(4, 4))

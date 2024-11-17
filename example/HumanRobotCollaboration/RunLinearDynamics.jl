@@ -51,14 +51,15 @@ si = dyn.sys_info
 # u_refs, x1 = get_simple_straight_line_2D_traj()
 # x_refs = unroll_raw_controls(dyn, times[1:T], u_refs, x1)
 k = 5
-h(x) = 3*x/(k+x) + exp(x-k)/(1+exp(x-k)) #Trajectory human wants to follow
+c = 2
+h(x) = 3*x/(k+x) + c*exp(x-k)/(1+exp(x-k)) #Trajectory human wants to follow
 r(x) = 3*x/(k+x) #Trajectory robot wants to follow
 h_prime(x) = 3*k/(k+x)^2
-r_prime(x) = 3*k/(k+x)^2 + exp(x-k)/(1+exp(x-k))^2
+r_prime(x) = 3*k/(k+x)^2 + c*exp(x-k)/(1+exp(x-k))^2
 x1, x_refs, u_refs = get_ground_truth_traj(dyn, times[1:T], h, r)
 traj_plot = plot_trajectory(dyn, times[1:T], x_refs, h, r)
-plt = plot(traj_plot, size=(800, 300))
-display(plt)
+grnd_truth_plt = plot(traj_plot, size=(800, 300))
+display(grnd_truth_plt)
 
 
 # Define simple quadratic costs for the agents.
@@ -108,7 +109,7 @@ Ts = 20
 num_games = 1
 num_particles = 100
 
-p_transition = 0.5
+p_transition = 0.98
 p_init = 0.5
 
 discrete_state_transition, state_trans_P = generate_discrete_state_transition(p_transition, p_transition)
@@ -171,9 +172,10 @@ gr()
 # Create the folder if it doesn't exist
 folder_name = "HRC_LQ_$(get_date_str())"
 isdir(folder_name) || mkdir(folder_name)
+savefig(grnd_truth_plt, joinpath(folder_name, "ground_truth.pdf"))
 
 # Generate the plots for the paper.
-snapshot_freq = Int((T - 1)/10)
+snapshot_freq = Int((T - 1)/20)
 # Generate a probability plot no timings.
 prob_plot = make_probability_plots(times[1:T], probs[1:T])
 plot!(prob_plot, title="")
@@ -187,7 +189,7 @@ savefig(p1a, pos_main_filepath)
 iter1 = ProgressBar(2:snapshot_freq:T)
 global p_i = 1
 for t in iter1
-    p1b = plot_leadership_filter_measurement_details_shared(num_particles, sg_objs[t], true_xs[:, 1:T], x̂s; include_all_labels=true)
+    p1b = plot_leadership_filter_measurement_details_shared(num_particles, sg_objs[t], true_xs[:, 1:T], x̂s; include_all_labels=true, t=t)
     pos2_filepath = joinpath(folder_name, "0$(p_i)_LF_merging_scenario_positions_detail.pdf")
     savefig(p1b, pos2_filepath)
     global p_i += 1
