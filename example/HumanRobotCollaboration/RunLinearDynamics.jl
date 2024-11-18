@@ -50,10 +50,16 @@ si = dyn.sys_info
 # Generate a ground truth trajectory on which to run the leadership filter for a merging trajectory.
 # u_refs, x1 = get_simple_straight_line_2D_traj()
 # x_refs = unroll_raw_controls(dyn, times[1:T], u_refs, x1)
+
+e = 2.7182
+h(x) = 0.1*x + 2*e^(-(x/0.5-4)^2)
+r(x) = 0.1*x  
+h_prime(x) = 0.1 - (16*x-32)-2.7182^(-(4-2*x)^2)
+r_prime(x) = 0.1 
 x1, x_refs, u_refs = get_ground_truth_traj(dyn, times[1:T])
-traj_plot = plot_trajectory(dyn, times[1:T], x_refs)
-plt = plot(traj_plot, size=(800, 300))
-display(plt)
+traj_plot = plot_trajectory(dyn, times[1:T], x_refs, h, r)
+grnd_truth_plt = plot(traj_plot, size=(800, 300))
+display(grnd_truth_plt)
 
 
 # Define simple quadratic costs for the agents.
@@ -78,7 +84,7 @@ GetCosts(dyn::Dynamics; ctrl_const=0.1) = begin
 end
 
 # costs = GetCosts(dyn)
-costs = create_HRC_costs(T, x_refs[1, T])
+costs = create_HRC_costs(T, x_refs[1, T], h, r, h_prime, r_prime)
 
 
 # Run the leadership filter.
@@ -103,7 +109,7 @@ Ts = 20
 num_games = 1
 num_particles = 100
 
-p_transition = 0.5
+p_transition = 0.98
 p_init = 0.5
 
 discrete_state_transition, state_trans_P = generate_discrete_state_transition(p_transition, p_transition)
@@ -167,8 +173,10 @@ gr()
 folder_name = "HRC_LQ_$(get_date_str())"
 isdir(folder_name) || mkdir(folder_name)
 
+savefig(grnd_truth_plt, joinpath(folder_name, "ground_truth.pdf"))
+
 # Generate the plots for the paper.
-snapshot_freq = Int((T - 1)/10)
+snapshot_freq = Int((T - 1)/20)
 # Generate a probability plot no timings.
 prob_plot = make_probability_plots(times[1:T], probs[1:T])
 plot!(prob_plot, title="")
@@ -179,14 +187,14 @@ p1a = plot_leadership_filter_positions_shared(dyn, true_xs[:, 1:T], x̂s[:, 1:T]
 pos_main_filepath = joinpath(folder_name, "LF_merging_scenario_main.pdf")
 savefig(p1a, pos_main_filepath)
 
-# iter1 = ProgressBar(2:snapshot_freq:T)
-# ii = 1
-# for t in iter1
-#     p1b = plot_leadership_filter_measurement_details(num_particles, sg_objs[t], true_xs[:, 1:T], x̂s; include_all_labels=true)
-#     pos2_filepath = joinpath(folder_name, "0$(ii)_LF_merging_scenario_positions_detail.pdf")
-#     savefig(p1b, pos2_filepath)
-#     ii +=1
-# end
+iter1 = ProgressBar(2:snapshot_freq:T)
+global p_i = 1
+for t in iter1
+    p1b = plot_leadership_filter_measurement_details_shared(num_particles, sg_objs[t], true_xs[:, 1:T], x̂s; include_all_labels=true, t=t)
+    pos2_filepath = joinpath(folder_name, "0$(p_i)_LF_merging_scenario_positions_detail.pdf")
+    savefig(p1b, pos2_filepath)
+    global p_i += 1
+end
 
 
 # make_merging_scenario_pdf_plots(folder_name, snapshot_freq, cfg, limits, sg_objs[1].dyn, T, times, true_xs, true_us, probs, x̂s, zs, num_particles)
