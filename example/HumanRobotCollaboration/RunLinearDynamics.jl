@@ -114,7 +114,7 @@ Ts = 20
 num_games = 1
 num_particles = 100
 
-p_transition = 0.98
+p_transition = 0.8
 p_init = 0.5
 
 discrete_state_transition, state_trans_P = generate_discrete_state_transition(p_transition, p_transition)
