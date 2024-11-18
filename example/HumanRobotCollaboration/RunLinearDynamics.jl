@@ -6,6 +6,7 @@ using Plots
 using ProgressBars
 using Random: MersenneTwister
 using Distributions: Bernoulli, MvNormal
+using CSV, Tables
 
 include("GroundTruthGenerators.jl")
 include("CreateHRCGame.jl")
@@ -60,6 +61,10 @@ x1, x_refs, u_refs = get_ground_truth_traj(dyn, times[1:T])
 traj_plot = plot_trajectory(dyn, times[1:T], x_refs, h, r)
 grnd_truth_plt = plot(traj_plot, size=(800, 300))
 display(grnd_truth_plt)
+
+# create some records for csv
+state_records = hcat(x_refs[1, :], x_refs[3, :]) 
+state_records = hcat(state_records, u_refs[1]', u_refs[2]')
 
 
 # Define simple quadratic costs for the agents.
@@ -166,6 +171,8 @@ x̂s, P̂s, probs, pf, sg_objs, iter_timings = leadership_filter(dyn, costs, t0,
                            verbose=true,
                            ensure_pd=false)
 
+state_records = hcat(state_records, vec(probs[1:T]))
+
 using Dates
 gr()
 
@@ -174,6 +181,9 @@ folder_name = "HRC_LQ_$(get_date_str())"
 isdir(folder_name) || mkdir(folder_name)
 
 savefig(grnd_truth_plt, joinpath(folder_name, "ground_truth.pdf"))
+
+header = ["x", "y", "u1_x", "u1_y", "u2_x", "u2_y", "u1_lead_prob"]
+CSV.write(joinpath(folder_name, "viz.csv"), Tables.table(state_records), writeheader=true, header=header)
 
 # Generate the plots for the paper.
 snapshot_freq = Int((T - 1)/20)
@@ -195,6 +205,10 @@ for t in iter1
     savefig(p1b, pos2_filepath)
     global p_i += 1
 end
+
+
+
+
 
 
 # make_merging_scenario_pdf_plots(folder_name, snapshot_freq, cfg, limits, sg_objs[1].dyn, T, times, true_xs, true_us, probs, x̂s, zs, num_particles)
