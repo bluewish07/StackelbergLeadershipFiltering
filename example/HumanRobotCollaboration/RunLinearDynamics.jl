@@ -111,10 +111,10 @@ R = zeros(xdim(dyn), xdim(dyn)) + 1e-3 * I
 zs = zeros(xdim(dyn), T)
 Ts = 20
 num_games = 1
-num_particles = 100
+num_particles = 200
 
-p_transition = 0.86
-p_init = 0.5
+p_transition = 0.92
+p_init = 0.1
 
 discrete_state_transition, state_trans_P = generate_discrete_state_transition(p_transition, p_transition)
 s_init_distrib = Bernoulli(p_init)
@@ -145,7 +145,7 @@ end
 # plot(pos_plot, p2, p3, p4, p5, p6, p7, layout=l)
 
 
-threshold = 2*1e-2
+threshold = 1.5*1e-2
 max_iters = 100
 step_size = 1e-2
 
@@ -170,7 +170,7 @@ x̂s, P̂s, probs, pf, sg_objs, iter_timings = leadership_filter(dyn, costs, t0,
                            verbose=true,
                            ensure_pd=false)
 
-state_records = hcat(state_records, vec(probs[1:T]))
+# state_records = hcat(state_records, vec(probs[1:T]))
 
 using Dates
 gr()
