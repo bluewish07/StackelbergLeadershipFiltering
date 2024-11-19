@@ -7,7 +7,7 @@ using ProgressBars
 using Random: MersenneTwister
 using Distributions: Bernoulli, MvNormal
 
-include("GroundTruthGenerators.jl")
+include("GroundTruthGenHRI.jl")
 include("CreateHRCGame.jl")
 
 # Two player dynamics
@@ -18,9 +18,9 @@ include("CreateHRCGame.jl")
 # Define game and timing related configuration.
 num_players = 2
 
-T = 101
+T =221
 t0 = 0.0
-dt = 0.1
+dt = 0.02
 horizon = T * dt
 times = dt * cumsum(ones(2*T)) .- dt
 
@@ -51,10 +51,9 @@ si = dyn.sys_info
 # u_refs, x1 = get_simple_straight_line_2D_traj()
 # x_refs = unroll_raw_controls(dyn, times[1:T], u_refs, x1)
 
-e = 2.7182
-h(x) = 0.1*x + 2*e^(-(x/0.5-4)^2)
+h(x) = 0.1*x + exp(-(x-3)^2)
 r(x) = 0.1*x  
-h_prime(x) = 0.1 - (16*x-32)-2.7182^(-(4-2*x)^2)
+h_prime(x) = 0.1 - (2*x-6)-exp(-(x-3)^2)
 r_prime(x) = 0.1 
 x1, x_refs, u_refs = get_ground_truth_traj(dyn, times[1:T])
 traj_plot = plot_trajectory(dyn, times[1:T], x_refs, h, r)
@@ -109,7 +108,7 @@ Ts = 20
 num_games = 1
 num_particles = 100
 
-p_transition = 0.98
+p_transition = 0.86
 p_init = 0.5
 
 discrete_state_transition, state_trans_P = generate_discrete_state_transition(p_transition, p_transition)
@@ -141,7 +140,7 @@ end
 # plot(pos_plot, p2, p3, p4, p5, p6, p7, layout=l)
 
 
-threshold = 1e-2
+threshold = 2*1e-2
 max_iters = 100
 step_size = 1e-2
 
