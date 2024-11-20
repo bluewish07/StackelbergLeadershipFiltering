@@ -6,7 +6,7 @@ using Plots
 using ProgressBars
 using Random: MersenneTwister
 using Distributions: Bernoulli, MvNormal
-# using CSV, Tables
+using CSV, Tables
 
 include("GroundTruthGenHRI.jl")
 include("CreateHRCGame.jl")
@@ -57,13 +57,16 @@ r(x) = 0.1*x
 h_prime(x) = 0.1 - (2*x-6)-exp(-(x-3)^2)
 r_prime(x) = 0.1 
 x1, x_refs, u_refs = get_ground_truth_traj(dyn, times[1:T])
+h_refs = [h(s) for s in x_refs[1, :]]
+r_refs = [r(s) for s in x_refs[1, :]]
 traj_plot = plot_trajectory(dyn, times[1:T], x_refs, h, r)
 grnd_truth_plt = plot(traj_plot, size=(800, 300))
 display(grnd_truth_plt)
 
 # create some records for csv
-# state_records = hcat(x_refs[1, :], x_refs[3, :]) 
-# state_records = hcat(state_records, u_refs[1]', u_refs[2]')
+state_records = hcat(x_refs[1, :], x_refs[3, :]) 
+state_records = hcat(state_records, vec(h_refs), vec(r_refs))
+state_records = hcat(state_records, u_refs[1]', u_refs[2]')
 
 
 # Define simple quadratic costs for the agents.
@@ -170,7 +173,8 @@ x̂s, P̂s, probs, pf, sg_objs, iter_timings = leadership_filter(dyn, costs, t0,
                            verbose=true,
                            ensure_pd=false)
 
-# state_records = hcat(state_records, vec(probs[1:T]))
+state_records = hcat(state_records, vec(probs[1:T]))
+println(size(state_records))
 
 using Dates
 gr()
@@ -181,8 +185,8 @@ isdir(folder_name) || mkdir(folder_name)
 
 savefig(grnd_truth_plt, joinpath(folder_name, "ground_truth.pdf"))
 
-header = ["x", "y", "u1_x", "u1_y", "u2_x", "u2_y", "u1_lead_prob"]
-# CSV.write(joinpath(folder_name, "viz.csv"), Tables.table(state_records), writeheader=true, header=header)
+header = ["x", "y", "y_hdes", "y_rdes", "u1_x", "u1_y", "u2_x", "u2_y", "u1_lead_prob"]
+CSV.write(joinpath(folder_name, "viz.csv"), Tables.table(state_records), writeheader=true, header=header)
 
 # Generate the plots for the paper.
 snapshot_freq = Int((T - 1)/20)
