@@ -18,7 +18,7 @@ function create_HRC_costs(T, goal_pos_x, h, r, h_prime, r_prime)
         y_bar = h_x + hp_x^2 * (x[3] - h_x) / (1 + hp_x^2)
         y_diff = y_bar - x[3]
         dist_to_goal = (x[1]-goal_pos_x)^2
-        return 1.5*(x_diff^2 + y_diff^2 + 0.005 / T * dist_to_goal)
+        return 2.0*(x_diff^2 + y_diff^2 + 0.005 / T * dist_to_goal)
     end
 
     traj_deviation_cost_robot_fn(si, x, us, t) = begin
@@ -30,7 +30,7 @@ function create_HRC_costs(T, goal_pos_x, h, r, h_prime, r_prime)
         # cost = (x_diff^2 + y_diff^2) 
         cost = abs(r_x - x[3])^2
         # println(cost)
-        return 3*cost
+        return 20.0*cost
     end
 
     c1_traj = PlayerCost(traj_deviation_cost_human_fn, si)
@@ -42,7 +42,7 @@ function create_HRC_costs(T, goal_pos_x, h, r, h_prime, r_prime)
     add_control_cost!(c1_control, 2, zeros(2, 2)) # human doesn't care about robot's control cost
 
     c2_control = QuadraticCost(zeros(4, 4))
-    add_control_cost!(c2_control, 1, ctrl_const * diagm([0, 0.1])) # robot should care about not making human pay too much control cost
+    add_control_cost!(c2_control, 1, ctrl_const * diagm([0, 0.05])) # robot should care about not making human pay too much control cost
     add_control_cost!(c2_control, 2, ctrl_const * diagm([0.12, 0.12]))
 
     costs_p1 = [c1_traj, c1_control]

@@ -10,7 +10,7 @@ function craft_control_inputs(X, u1_scaling, tt, dt) #X is the state
     f(x) = 0.1*x + exp(-(x-3)^2)
     r(x) = 0.1*x  
     damping_ratio = 0.0
-    K0 = 0.5 #Spring constant
+    K0 = 0.8 #Spring constant
     u1_scaling = 1.0
 
     x_t = X[1]

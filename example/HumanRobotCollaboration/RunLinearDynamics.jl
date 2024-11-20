@@ -19,9 +19,9 @@ include("CreateHRCGame.jl")
 # Define game and timing related configuration.
 num_players = 2
 
-T =221
+T =421
 t0 = 0.0
-dt = 0.02
+dt = 0.01
 horizon = T * dt
 times = dt * cumsum(ones(2*T)) .- dt
 
@@ -99,7 +99,7 @@ vel_unc = 1e-4
 P1 = Diagonal([pos_unc, pos_unc, pos_unc, vel_unc])
 
 # Process noise uncertainty
-Q = 1e-2 * Diagonal([1e-2, 1e-3, 1e-2, 1e-3])
+Q = 0.5*1e-2 * Diagonal([1e-2, 1e-3, 1e-2, 1e-3])
 
 
 # CONFIG: 
@@ -111,10 +111,10 @@ R = zeros(xdim(dyn), xdim(dyn)) + 1e-3 * I
 zs = zeros(xdim(dyn), T)
 Ts = 20
 num_games = 1
-num_particles = 200
+num_particles = 150
 
-p_transition = 0.92
-p_init = 0.1
+p_transition = 0.9
+p_init = 0.4
 
 discrete_state_transition, state_trans_P = generate_discrete_state_transition(p_transition, p_transition)
 s_init_distrib = Bernoulli(p_init)
@@ -145,7 +145,7 @@ end
 # plot(pos_plot, p2, p3, p4, p5, p6, p7, layout=l)
 
 
-threshold = 1.5*1e-2
+threshold = 2*1e-2
 max_iters = 100
 step_size = 1e-2
 
