@@ -60,7 +60,7 @@ x1, x_refs, u_refs = get_ground_truth_traj(dyn, times[1:T])
 h_refs = [h(s) for s in x_refs[1, :]]
 r_refs = [r(s) for s in x_refs[1, :]]
 traj_plot = plot_trajectory(dyn, times[1:T], x_refs, h, r)
-grnd_truth_plt = plot(traj_plot, size=(800, 300))
+grnd_truth_plt = plot(traj_plot, size=(1000, 500))
 display(grnd_truth_plt)
 
 # create some records for csv
