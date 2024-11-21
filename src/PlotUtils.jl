@@ -28,7 +28,7 @@ function rotate_state(dyn::UnicycleDynamics, xs)
 end
 export rotate_state
 
-function plot_trajectory(dyn::LinearDynamics, times, xs, h, r; include_legend=:none, ms0=6)
+function plot_trajectory(dyn::LinearDynamics, times, xs, h, r; ms0=6)
     @assert xdim(dyn) == 4
     num_times = length(times)
     marksize = vcat([ms0], zeros(num_times-1))
@@ -36,14 +36,13 @@ function plot_trajectory(dyn::LinearDynamics, times, xs, h, r; include_legend=:n
     hs = [h(s) for s in xs[1, :]]
     rs = [r(s) for s in xs[1, :]]
 
-    title1 = "pos. traj."
-    q1 = get_standard_plot(;include_legend)
-    plot!(title=title1, xlabel="Horizontal Position (m)", ylabel="Vertical Position (m)")
-    plot!(q1, xs[1, :], xs[3,:], linewidth=3, color=:black, marker=:circle,  markersize=marksize, markerstrokewidth=0)
-    plot!(q1, xs[1, :], hs, linewidth=3, color=:red, marker=:circle,  markersize=marksize, markerstrokewidth=0)
-    plot!(q1, xs[1, :], rs, linewidth=3, color=:blue, marker=:circle,  markersize=marksize, markerstrokewidth=0)
+    q1 = get_standard_plot()
+    plot!(xlabel="Horizontal Position (cm)", ylabel="Vertical Position (cm)", legendcolumns=1, legend=:topleft)
+    plot!(q1, xs[1, :], xs[3,:], linewidth=3, color=:black, marker=:circle,  markersize=marksize, markerstrokewidth=0, label="Ground Truth", legendfontsize=15)
+    plot!(q1, xs[1, :], hs, linewidth=3, color=:red, marker=:circle,  markersize=marksize, markerstrokewidth=0, label="Human Desired Path", legendfontsize=15)
+    plot!(q1, xs[1, :], rs, linewidth=3, color=:blue, marker=:circle,  markersize=marksize, markerstrokewidth=0, label="Preplanned Robot Path", legendfontsize=15)
 
-    q1 = scatter!([xs[1, Int64(floor(num_times/2))]], [xs[3, Int64(floor(num_times/2))]], color=:black)
+    # q1 = scatter!([xs[1, Int64(floor(num_times/2))]], [xs[3, Int64(floor(num_times/2))]], color=:black)
     return q1
 end
 export plot_trajectory
@@ -262,11 +261,11 @@ function plot_leadership_filter_positions_shared(dyn::Dynamics, true_xs, est_xs)
     x₁ = true_xs[:, 1]
 
     p1 = get_standard_plot(;columns=2, legendfontsize=18)
-    plot!(ylabel="Vertical Position (m)", xlabel="Horizontal Position (m)")
-    plot!(p1, true_xs[1, :], true_xs[3, :], label=L"Ground Truth", color=:red, linewidth=2, ls=:dash)
-    plot!(p1, est_xs[1, :], est_xs[3, :], label=L"Estimate", color=:orange)
+    plot!(ylabel="Vertical Position (cm)", xlabel="Horizontal Position (cm)")
+    plot!(p1, true_xs[1, :], true_xs[3, :], label="Ground Truth", color=:black, linewidth=2, ls=:dash)
+    plot!(p1, est_xs[1, :], est_xs[3, :], label="Estimate by SLF", color=:orange)
     # scatter!(p1, zs[x1_idx, :], zs[y1_idx, :], color=:red, marker=:plus, ms=6, markerstrokewidth=0, label=L"\mathcal{A}_1 Measurements")
-    scatter!(p1, [x₁[1]], [x₁[3]], color=:red, label="")# L"$\mathcal{A}_1$ Start")
+    # scatter!(p1, [x₁[1]], [x₁[3]], color=:red, label="")# L"$\mathcal{A}_1$ Start")
 
     return p1
 end
@@ -399,12 +398,9 @@ function plot_leadership_filter_measurement_details_shared(dyn::Dynamics, partic
 
     if include_all_labels
         p2 = get_standard_plot(;columns=2, legendfontsize=12)
-        p1_est_label = L"$\mathcal{A}_1$ Estimate"
+        p1_est_label = "Estimate by SLF"
         # p1_truth_label = L"$\mathcal{A}_1$ Truth"
-        p1_truth_label = "Truth"
-        p2_est_label = L"$\mathcal{A}_2$ Estimate"
-        # p2_truth_label = L"$\mathcal{A}_2$ Truth"
-        p2_truth_label = ""
+        p1_truth_label = "Ground Truth"
     else
         p2 = get_standard_plot(;columns=2)
         p1_est_label = ""
@@ -414,16 +410,16 @@ function plot_leadership_filter_measurement_details_shared(dyn::Dynamics, partic
         # Remove axis and grid.
         plot!(axis=([], false), grid=true)
     end
-    plot!(ylabel="Vertical Position (m)", xlabel="Horizontal Position (m)")
+    plot!(ylabel="Vertical Position (cm)", xlabel="Horizontal Position (cm)")
 
     # If t is provided, annotate the plot.
     if !isnothing(t) 
-        annotate!(p2, 1.1, 1.8, text("time step $(t)", 30))
+        annotate!(p2, 1.1, 1.8, text("timestep = $(t)", 20))
     end
 
     plot!(p2, true_xs[1, :], true_xs[3, :], color=:black, linewidth=3, label=p1_truth_label)
     plot!(p2, est_xs[1, :], est_xs[3, :], color=:orange, label=p1_est_label)
-    scatter!(p2, [x₁[1]], [x₁[3]], color=:red, label="") # L"$\mathcal{A}_1$ Start")
+
 
     # Add particles
     has_labeled_p1 = false
@@ -447,8 +443,8 @@ function plot_leadership_filter_measurement_details_shared(dyn::Dynamics, partic
             has_labeled_p2 = true
         end
 
-        scatter!(p2, xks[1, :], xks[3, :], color=color, markersize=1., markerstrokewidth=0, label="")
-        scatter!(p2, [xks[1, 2]], [xks[3, 2]], color=color, markersize=3., markerstrokewidth=0, label=label_1)
+        scatter!(p2, xks[1, :], xks[3, :], color=color, markersize=1., markerstrokewidth=0, label=(does_p1_lead ? label_1 : label_2))
+        # scatter!(p2, [xks[1, 2]], [xks[3, 2]], color=color, markersize=3., markerstrokewidth=0, label=label_1)
     end
 
     return p2
@@ -464,7 +460,7 @@ function make_probability_plots(times, probs; player_to_plot=nothing, t_idx=noth
 
     # probability plot for P1 - plot 5
     plot = get_standard_plot(columns=4)
-    plot!(xlabel="t (s)", ylabel="Leadership Probability", ylimit=(-0.1, 1.1), label="")
+    plot!(xlabel="timestep", ylabel="Leadership Probability", ylimit=(-0.1, 1.1), label="")
     if player_to_plot == 1 || isnothing(player_to_plot)
         # L"""$\mathbb{P}(H_t=\mathcal{A}_1)$"""
         if !isnothing(include_gt)
@@ -472,7 +468,7 @@ function make_probability_plots(times, probs; player_to_plot=nothing, t_idx=noth
         end
 
         # Bound the stddevs to avoid going above 1 or below 0.
-        plot!(plot, times, probs, color=:red, label=L"\mathcal{A}_1", ribbon=(lower_p1, upper_p1), fillalpha=0.3)
+        plot!(plot, times, probs, color=:red, label=L"\mathcal{A}_1\ (Human)", ribbon=(lower_p1, upper_p1), fillalpha=0.3)
     end
 
     # probability plot for P2 - plot 6
@@ -485,7 +481,7 @@ function make_probability_plots(times, probs; player_to_plot=nothing, t_idx=noth
         end
 
         lower_p2, upper_p2 = upper_p1, lower_p1
-        plot!(plot, times, 1 .- probs, color=:blue, label=L"\mathcal{A}_2", ribbon=(lower_p2, upper_p2), fillalpha=0.3)
+        plot!(plot, times, 1 .- probs, color=:blue, label=L"\mathcal{A}_2\ (Robot)", ribbon=(lower_p2, upper_p2), fillalpha=0.3)
     end
 
     # Draw the lines of interest.
